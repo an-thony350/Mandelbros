@@ -1,0 +1,38 @@
+# Vivado
+fpga/projects/
+*.xpr
+*.cache/
+*.hw/
+*.runs/
+*.gen/
+*.sim/
+*.ip_user_files/
+.Xil/
+vivado*.log
+vivado*.jou
+webtalk*.log
+fpga/ip/*/                      # generated IP outputs
+!fpga/ip/*/*.xci                # but keep the recipes
+!fpga/ip/*/                     # and the directories themselves
+
+# Verilator
+sim/verilator/obj_dir/
+sim/results/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+
+# Pico SDK
+controller/firmware/build/
+
+# KiCad
+*-backups/
+fp-info-cache
+*.bak
+
+# Editors
+.vscode/
+.idea/
