@@ -1,0 +1,1 @@
+all synth + impl + create_proj tcl files 

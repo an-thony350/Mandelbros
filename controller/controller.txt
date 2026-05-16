@@ -1,0 +1,1 @@
+all firmware, KiCad project files, etc. go here

@@ -1,5 +1,5 @@
 # Vivado
-fpga/projects/
+#fpga/projects/
 *.xpr
 *.cache/
 *.hw/
