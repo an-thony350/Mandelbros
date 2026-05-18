@@ -1,6 +1,7 @@
 #include "set_calculation.cpp"
 #include <chrono>
 #include <thread>
+#include <vector>
 
 // Defined Resolution sizes
 #define ROW_NUM 1280
@@ -21,10 +22,12 @@ void Threaded_Mandel_iter(int start, int end){
 
 int main(){
 
+
+    // Unoptimised loop version
+
     auto Start_Mandelbrot_NT = std::chrono::high_resolution_clock::now();
     std::cout << "Starting non-threaded time..." << std::endl;
 
-    // temporary loop - pixel calculatons will occur here - theading possible
     
     
     for(int i = 0; i < ROW_NUM; i++){
@@ -37,34 +40,23 @@ int main(){
 
     auto End_Mandelbrot_NT = std::chrono::high_resolution_clock::now();
 
-    //Threading implementation
-    // Look at this later (cleanup)
+    // Threading implementation - using 16 threads
 
+    std::vector<std::thread> threads;
+    for(int i = 0; i < 16; i++){
+        threads.push_back(std::thread(Threaded_Mandel_iter,80*i, 79 + 80*i));
+    }
 
-    std::thread first (Threaded_Mandel_iter,0,159);
-    std::thread second (Threaded_Mandel_iter,160,319);
-    std::thread third (Threaded_Mandel_iter,320,479);
-    std::thread fourth (Threaded_Mandel_iter,480,639);
-    std::thread fifth (Threaded_Mandel_iter,640,799);
-    std::thread sixth (Threaded_Mandel_iter,800,959);
-    std::thread seventh (Threaded_Mandel_iter,960,1119);
-    std::thread eighth (Threaded_Mandel_iter,1120,1280);
-
-    first.join();
-    second.join();
-    third.join();
-    fourth.join();
-    fifth.join();
-    sixth.join();
-    seventh.join();
-    eighth.join();
+    for(int i = 0; i < 16; i++){
+        threads[i].join();
+    }
 
     std::cout << "All threads joined... \n";
 
     auto End_Mandelbrot_T = std::chrono::high_resolution_clock::now();
 
-    //Timing calculations
-    
+    // Timing calculations
+
     auto Mandelbrot_Time_NT = std::chrono::duration<double>(End_Mandelbrot_NT - Start_Mandelbrot_NT);
     auto Mandelbrot_Time_T = std::chrono::duration<double>(End_Mandelbrot_T - End_Mandelbrot_NT);
     double multiple = (Mandelbrot_Time_T.count() > Mandelbrot_Time_NT.count()) ? Mandelbrot_Time_T.count()/Mandelbrot_Time_NT.count() : Mandelbrot_Time_NT.count()/Mandelbrot_Time_T.count();
