@@ -1,0 +1,42 @@
+name: number-format-study
+
+on:
+  push:
+    paths:
+      - "docs/studies/number_format/**"
+      - ".github/workflows/number-format-study.yml"
+  pull_request:
+    paths:
+      - "docs/studies/number_format/**"
+      - ".github/workflows/number-format-study.yml"
+  workflow_dispatch:
+
+jobs:
+  build-test-study:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: docs/studies/number_format
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: docs/studies/number_format/requirements.txt
+
+      - name: Install Python deps
+        run: pip install -r requirements.txt
+
+      - name: Build, test, smoke study
+        run: make ci
+
+      - name: Upload smoke plots
+        uses: actions/upload-artifact@v4
+        with:
+          name: number-format-smoke-plots
+          path: docs/studies/number_format/plots/
+          if-no-files-found: error
+          retention-days: 14
