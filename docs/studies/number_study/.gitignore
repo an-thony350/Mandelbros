@@ -1,0 +1,15 @@
+# Build artefacts
+build/
+
+# Intermediate data — large, regeneratable
+data/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Local dev
+*.bin
+.DS_Store
