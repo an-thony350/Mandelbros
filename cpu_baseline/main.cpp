@@ -17,53 +17,66 @@ void Threaded_Mandel_iter(int start, int end){
     }
 }
 
+double average(std::vector<double> v){
+    double ans = 0;
+    for(int i = 0; i < v.size(); i++){
+        ans += v[i]/v.size();
+    }
+    return ans;
+}
+
 // Used for timing constraints, this could be moved elswhere as a "timing" funct.
 // But currently placed here
 
 int main(){
 
 
-    // Unoptimised loop version
+    std::vector<double> Mandelbrot_Times_NT, Mandelbrot_Times_T;
 
-    auto Start_Mandelbrot_NT = std::chrono::high_resolution_clock::now();
-    std::cout << "Starting non-threaded time..." << std::endl;
+    for(int i = 0; i < 10; i++){
 
-    
-    
-    for(int i = 0; i < ROW_NUM; i++){
-        for(int j = 0; j < COL_NUM; j++){
-            int Mandelbrot_iter = Mandelbrot_calculation(i/ROW_NUM,j/COL_NUM,256);
+        std::cout << "Loop " << i + 1 << " started...\n";
+
+        // Unoptimised loop version
+        auto Start_Mandelbrot_NT = std::chrono::high_resolution_clock::now();
+ 
+        for(int i = 0; i < ROW_NUM; i++){
+            for(int j = 0; j < COL_NUM; j++){
+                int Mandelbrot_iter = Mandelbrot_calculation(i/ROW_NUM,j/COL_NUM,256);
+            }
         }
+
+        auto End_Mandelbrot_NT = std::chrono::high_resolution_clock::now();
+
+        // Threading implementation - using 16 threads
+
+        std::vector<std::thread> threads;
+        for(int i = 0; i < 16; i++){
+            threads.push_back(std::thread(Threaded_Mandel_iter,80*i, 79 + 80*i));
+        }
+
+        for(int i = 0; i < 16; i++){
+            threads[i].join();
+        }
+
+        auto End_Mandelbrot_T = std::chrono::high_resolution_clock::now();
+
+        // Timing calculations
+
+        auto Mandelbrot_Time_NT = std::chrono::duration<double>(End_Mandelbrot_NT - Start_Mandelbrot_NT);
+        auto Mandelbrot_Time_T = std::chrono::duration<double>(End_Mandelbrot_T - End_Mandelbrot_NT);
+
+        Mandelbrot_Times_NT.push_back(Mandelbrot_Time_NT.count());
+        Mandelbrot_Times_T.push_back(Mandelbrot_Time_T.count());
     }
 
-    std::cout << "Non-Threaded loop done. \nStarting threaded implemenation... \n";
+    double Mandelbrot_Avr_NT = average(Mandelbrot_Times_NT);
+    double Mandelbrot_Avr_T = average(Mandelbrot_Times_T);
 
-    auto End_Mandelbrot_NT = std::chrono::high_resolution_clock::now();
 
-    // Threading implementation - using 16 threads
+    double multiple = (Mandelbrot_Avr_T < Mandelbrot_Avr_NT) ? Mandelbrot_Avr_NT/Mandelbrot_Avr_T : Mandelbrot_Avr_T/Mandelbrot_Avr_NT;
+    std::cout << "Average time for non-threaded approach: " << Mandelbrot_Avr_NT << "s \n";
+    std::cout << "Average time for threaded approach: " << Mandelbrot_Avr_T << "s \n";
 
-    std::vector<std::thread> threads;
-    for(int i = 0; i < 16; i++){
-        threads.push_back(std::thread(Threaded_Mandel_iter,80*i, 79 + 80*i));
-    }
-
-    for(int i = 0; i < 16; i++){
-        threads[i].join();
-    }
-
-    std::cout << "All threads joined... \n";
-
-    auto End_Mandelbrot_T = std::chrono::high_resolution_clock::now();
-
-    // Timing calculations
-
-    auto Mandelbrot_Time_NT = std::chrono::duration<double>(End_Mandelbrot_NT - Start_Mandelbrot_NT);
-    auto Mandelbrot_Time_T = std::chrono::duration<double>(End_Mandelbrot_T - End_Mandelbrot_NT);
-    double multiple = (Mandelbrot_Time_T.count() > Mandelbrot_Time_NT.count()) ? Mandelbrot_Time_T.count()/Mandelbrot_Time_NT.count() : Mandelbrot_Time_NT.count()/Mandelbrot_Time_T.count();
-    
-    std::cout << "Both Loops Complete! \n";
-    std::cout << "Time for non-threaded approach: " << Mandelbrot_Time_NT.count() << "s \n";
-    std::cout << "Time for threaded approach: " << Mandelbrot_Time_T.count() << "s \n";
-
-    std::cout << ((Mandelbrot_Time_T.count() < Mandelbrot_Time_NT.count()) ? "Threaded approach has a " : "Non Threaded approach has a ") << multiple << "x speedup \n";
+    std::cout << ((Mandelbrot_Avr_T < Mandelbrot_Avr_NT) ? "Threaded approach has a " : "Non Threaded approach has a ") << multiple << "x speedup \n";
 }
