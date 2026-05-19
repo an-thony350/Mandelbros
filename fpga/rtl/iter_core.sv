@@ -62,6 +62,7 @@ module iter_core #(
 
     // Pipeline registers: slot[0] = stage 0 input, ..., slot[4] = stage 4
     slot_t s0_r, s1_r, s2_r, s3_r, s4_r;
+    logic signed [W-1:0] s0_zm_r, s0_zm_i;
 
     // STAGE 0 : apply mode transform to z, prepare multiplier operands
 
@@ -116,36 +117,48 @@ module iter_core #(
     localparam logic signed [PROD_W-1:0] ROUND_BIAS = (1 <<< (FRAC - 1)); // for rounding the products when shifting down
 
     logic signed [PROD_W-1:0]   s2_zr2_round_c, s2_zi2_round_c, s2_zrzi_round_c;
-    logic signed [W-1:0]        zr2_q422_c, zi2_q422_c;
+    logic signed [W-1:0]        zr2_q422_c, zi2_q422_c, zrzi_q422_c;
     logic signed [W:0]          two_zrzi_q523_c;
     logic                       zr2_ovf_c, zi2_ovf_c, zrzi_ovf_c;
 
+    logic zr2_upper_all_ones, zr2_upper_all_zeros;
+    logic zi2_upper_all_ones, zi2_upper_all_zeros;
+    logic zrzi_upper_all_ones, zrzi_upper_all_zeros;
 
-    always_comb begin
-        // add rounding bias before shifting down to Q4.22
-        s2_zr2_round_c   = s2_zr2_full_r   + ROUND_BIAS;
-        s2_zi2_round_c   = s2_zi2_full_r   + ROUND_BIAS;
-        s2_zrzi_round_c  = s2_zrzi_full_r  + ROUND_BIAS;
+always_comb begin
+    // add rounding bias before shifting down to Q4.22
+    s2_zr2_round_c   = s2_zr2_full_r   + ROUND_BIAS;
+    s2_zi2_round_c   = s2_zi2_full_r   + ROUND_BIAS;
+    s2_zrzi_round_c  = s2_zrzi_full_r  + ROUND_BIAS;
 
-        // slice the Q4.22 version
-        zr2_q422_c       = s2_zr2_round_c[W+FRAC -1 : FRAC];
-        zi2_q422_c       = s2_zi2_round_c[W+FRAC -1 : FRAC];
-        two_zrzi_q523_c  = s2_zrzi_round_c[W+FRAC : FRAC]; // one extra bit for potential overflow
+    // slice the Q4.22 version
+    zr2_q422_c       = s2_zr2_round_c[W+FRAC-1 : FRAC];
+    zi2_q422_c       = s2_zi2_round_c[W+FRAC-1 : FRAC];
+    zrzi_q422_c      = s2_zrzi_round_c[W+FRAC-1 : FRAC];
+    
+    two_zrzi_q523_c  = $signed({zrzi_q422_c[W-1], zrzi_q422_c}) <<< 1;
 
-        // check overflow - bit above kept range is either all 0 or 1
-        zr2_ovf_c = ~(&s2_zr2_round_c [PROD_W - 1 : W + FRAC - 1]) | ~(|s2_zr2_round_c [PROD_W - 1 : W + FRAC - 1]);
+    // overflow if discarded upper bits are mixed
+    // no overflow if they are all 0 or all 1
+    zr2_upper_all_ones  =  &s2_zr2_round_c[PROD_W-1 : W+FRAC-1];
+    zr2_upper_all_zeros = ~|s2_zr2_round_c[PROD_W-1 : W+FRAC-1];
+    zr2_ovf_c           = ~(zr2_upper_all_ones | zr2_upper_all_zeros);
 
-        zi2_ovf_c = ~(&s2_zi2_round_c [PROD_W - 1 : W + FRAC - 1]) | ~(|s2_zi2_round_c [PROD_W - 1 : W + FRAC - 1]);
+    zi2_upper_all_ones  =  &s2_zi2_round_c[PROD_W-1 : W+FRAC-1];
+    zi2_upper_all_zeros = ~|s2_zi2_round_c[PROD_W-1 : W+FRAC-1];
+    zi2_ovf_c           = ~(zi2_upper_all_ones | zi2_upper_all_zeros);
 
-        zrzi_ovf_c = ~(&s2_zrzi_round_c [PROD_W - 1 : W + FRAC]) | ~(|s2_zrzi_round_c [PROD_W - 1 : W + FRAC]);
-    end
+    zrzi_upper_all_ones  =  &s2_zrzi_round_c[PROD_W-1 : W+FRAC-1];
+    zrzi_upper_all_zeros = ~|s2_zrzi_round_c[PROD_W-1 : W+FRAC-1];
+    zrzi_ovf_c           = ~(zrzi_upper_all_ones | zrzi_upper_all_zeros);
+end
 
     // Stage 4 - combine, test for escape and decide eject vs recycle
 
     slot_t s4_payload_r;
 
     logic signed [W-1:0] s4_z_r_new_r, s4_z_i_new_r;
-    logic s4_escape_r;
+    logic s4_escaped_r;
     logic s4_reached_max_r;
     logic s4_ovf_r;
 
@@ -166,14 +179,14 @@ module iter_core #(
         mag_sq_w_c = $signed({s3_zr2_r[W-1], s3_zr2_r}) + $signed({s3_zi2_r[W-1], s3_zi2_r});
 
         //truncate back down to 26 bits, saturating to max magnitude if overflow
-        zr_new_c = zr_new_w_c[W-1:0];
-        zi_new_c = z_i_new_w_c[W-1:0];
+        z_r_new_c = z_r_new_w_c[W-1:0];
+        z_i_new_c = z_i_new_w_c[W-1:0];
 
         // overflow if discarded top bit aint the same
         s4_combine_ovf_c =  (z_r_new_w_c[W] ^ z_r_new_w_c[W-1]) | (z_i_new_w_c[W] ^ z_i_new_w_c[W-1]);
 
         // escape test
-        escaped_c = ($signed(mag_sq_w_c) > $signed({1'b0, ESCAPE_THRESH_Q422})); // compare in 27 bits to avoid overflow
+        escaped_c = s3_ovf_r | ($signed(mag_sq_w_c) > $signed({1'b0, ESCAPE_THRESH_Q422})); // compare in 27 bits to avoid overflow
 
         reached_max_c = ((s3_payload_r.iter + 1'b1) == s3_payload_r.max_iter);
     end
@@ -192,13 +205,14 @@ module iter_core #(
 
     logic advance;
     assign advance = ~s4_stall_c; // can advance if not stalled in stage 4
-
+    assign in_ready = advance & (s4_eject_now_c | ~s4_r.valid);
+    
     assign out_valid = s4_done_c;
     assign out_seq = s4_r.seq;
     assign out_iter = s4_r.iter;
     assign out_z_r = s4_r.z_r;
     assign out_z_i = s4_r.z_i;
-    assign out_escaped = s4_r.escaped;
+    assign out_escaped = s4_escaped_r;
     assign out_overflow = s4_r.overflow;
 
     // s0 next-state logic
@@ -291,15 +305,26 @@ module iter_core #(
             s4_r.seq      <= s3_payload_r.seq;
             s4_r.mode     <= s3_payload_r.mode;
             s4_r.max_iter <= s3_payload_r.max_iter;
-            s4_r.iter     <= s3_payload_r.iter + 1'b1;
-            s4_r.c_r      <= s3_payload_r.c_r;
-            s4_r.c_i      <= s3_payload_r.c_i;
-            s4_r.z_r      <= z_r_new_c;
-            s4_r.z_i      <= z_i_new_c;
+            s4_r.c_r <= s3_payload_r.c_r;
+            s4_r.c_i <= s3_payload_r.c_i;
+            
+            if (escaped_c) begin
+                // Current z has already escaped, do not count another iteration.
+                s4_r.iter <= s3_payload_r.iter;
+                s4_r.z_r  <= s3_payload_r.z_r;
+                s4_r.z_i  <= s3_payload_r.z_i;
+            end
+            else begin
+                // Current z has not escaped, so perform one more iteration.
+                s4_r.iter <= s3_payload_r.iter + 1'b1;
+                s4_r.z_r  <= z_r_new_c;
+                s4_r.z_i  <= z_i_new_c;
+            end
+            
             s4_r.overflow <= s3_ovf_r | s4_combine_ovf_c;
- 
+            
             s4_escaped_r     <= escaped_c;
-            s4_reached_max_r <= reached_max_c;
+            s4_reached_max_r <= ~escaped_c & reached_max_c;
         end
         // else: advance=0, pipeline holds everything, no register updates
     end
