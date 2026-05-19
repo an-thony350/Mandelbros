@@ -140,4 +140,40 @@ module iter_core #(
         zrzi_ovf_c = ~(&s2_zrzi_round_c [PROD_W - 1 : W + FRAC]) | ~(|s2_zrzi_round_c [PROD_W - 1 : W + FRAC]);
     end
 
-    
+    // Stage 4 - combine, test for escape and decide eject vs recycle
+
+    slot_t s4_payload_r;
+
+    logic signed [W-1:0] s4_z_r_new_r, s4_z_i_new_r;
+    logic s4_escape_r;
+    logic s4_reached_max_r;
+    logic s4_ovf_r;
+
+    // combinational logic for stage 4 outputs
+    logic signed [W:0] zr2_minus_zi2_c, z_r_new_w_c, z_i_new_w_c, mag_sq_w_c;
+    logic escaped_c, reached_max_c, s4_combine_ovf_c;
+
+    logic signed [W-1:0] z_r_new_c, z_i_new_c;
+
+    always_comb begin
+        // do add/subs in 27-bit signed to be safe
+        zr2_minus_zi2_c = $signed({s3_zr2_r[W-1], s3_zr2_r}) - $signed({s3_zi2_r[W-1], s3_zi2_r});
+
+        z_r_new_w_c = zr2_minus_zi2_c + $signed({s3_payload_r.c_r[W-1], s3_payload_r.c_r});
+
+        z_i_new_w_c = s3_two_zrzi_r + $signed({s3_payload_r.c_i[W-1], s3_payload_r.c_i});
+
+        mag_sq_w_c = $signed({s3_zr2_r[W-1], s3_zr2_r}) + $signed({s3_zi2_r[W-1], s3_zi2_r});
+
+        //truncate back down to 26 bits, saturating to max magnitude if overflow
+        zr_new_c = zr_new_w_c[W-1:0];
+        zi_new_c = z_i_new_w_c[W-1:0];
+
+        // overflow if discarded top bit aint the same
+        s4_combine_ovf_c =  (z_r_new_w_c[W] ^ z_r_new_w_c[W-1]) | (z_i_new_w_c[W] ^ z_i_new_w_c[W-1]);
+
+        // escape test
+        escaped_c = ($signed(mag_sq_w_c) > $signed({1'b0, ESCAPE_THRESH_Q422})); // compare in 27 bits to avoid overflow
+
+        reached_max_c = ((s3_payload_r.iter + 1'b1) == s3_payload_r.max_iter);
+    end
