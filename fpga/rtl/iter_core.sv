@@ -200,3 +200,111 @@ module iter_core #(
     assign out_z_i = s4_r.z_i;
     assign out_escaped = s4_r.escaped;
     assign out_overflow = s4_r.overflow;
+
+    // s0 next-state logic
+
+    slot_t s0_next_c;
+
+    always_comb begin
+        if (~advance) begin
+            s0_next_c = s0_r; // hold if stage 4 is stalled
+        end 
+        else if (s4_eject_now_c | ~s4_r.valid) begin
+            if (in_valid) begin
+                s0_next_c.valid = 1'b1;
+                s0_next_c.seq = in_seq;
+                s0_next_c.mode = in_mode;
+                s0_next_c.max_iter = in_max_iter;
+                s0_next_c.iter = '0;
+                s0_next_c.c_r = in_c_r;
+                s0_next_c.c_i = in_c_i;
+                s0_next_c.z_r = in_z0_r;
+                s0_next_c.z_i = in_z0_i;
+                s0_next_c.overflow = 1'b0; // no overflow at the start
+            end 
+            else begin
+                s0_next_c.valid = 1'b0; // bubble
+            end
+        end
+        else begin
+            s0_next_c.valid    = 1'b1;
+            s0_next_c.seq      = s4_r.seq;
+            s0_next_c.mode     = s4_r.mode;
+            s0_next_c.max_iter = s4_r.max_iter;
+            s0_next_c.iter     = s4_r.iter;    // already incremented at s4
+            s0_next_c.c_r      = s4_r.c_r;
+            s0_next_c.c_i      = s4_r.c_i;
+            s0_next_c.z_r      = s4_r.z_r;     // already updated at s4
+            s0_next_c.z_i      = s4_r.z_i;
+            s0_next_c.overflow = s4_r.overflow;
+        end
+    end
+
+    // pip reg updates
+
+    always_ff @(posedge clk) begin
+        if (!rst_n) begin
+            s0_r          <= '0;
+            s1_payload_r  <= '0;
+            s1_zm_r       <= '0;
+            s1_zm_i       <= '0;
+            s2_payload_r  <= '0;
+            s2_zr2_full_r <= '0;
+            s2_zi2_full_r <= '0;
+            s2_zrzi_full_r<= '0;
+            s3_payload_r  <= '0;
+            s3_zr2_r      <= '0;
+            s3_zi2_r      <= '0;
+            s3_two_zrzi_r <= '0;
+            s3_ovf_r      <= '0;
+            s4_r          <= '0;
+            s4_z_r_new_r  <= '0;
+            s4_z_i_new_r  <= '0;
+            s4_escaped_r  <= '0;
+            s4_reached_max_r <= '0;
+            s4_ovf_r      <= '0;
+        end
+        else if (advance) begin
+            // s0 takes from the mux above
+            s0_r <= s0_next_c;
+ 
+            // s0 -> s1: register modified z operands and carry payload
+            s1_payload_r <= s0_r;
+            s1_zm_r      <= s0_zm_r;
+            s1_zm_i      <= s0_zm_i;
+ 
+            // s1 -> s2: compute the three full products
+            s2_payload_r   <= s1_payload_r;
+            s2_zr2_full_r  <= s1_zm_r * s1_zm_r;
+            s2_zi2_full_r  <= s1_zm_i * s1_zm_i;
+            s2_zrzi_full_r <= s1_zm_r * s1_zm_i;
+ 
+            // s2 -> s3: round to Q4.22, latch overflow flags
+            s3_payload_r  <= s2_payload_r;
+            s3_zr2_r      <= zr2_q422_c;
+            s3_zi2_r      <= zi2_q422_c;
+            s3_two_zrzi_r <= two_zrzi_q523_c;
+            s3_ovf_r      <= s2_payload_r.overflow | zr2_ovf_c | zi2_ovf_c | zrzi_ovf_c;
+ 
+            // s3 -> s4: combine and decide
+            s4_r.valid    <= s3_payload_r.valid;
+            s4_r.seq      <= s3_payload_r.seq;
+            s4_r.mode     <= s3_payload_r.mode;
+            s4_r.max_iter <= s3_payload_r.max_iter;
+            s4_r.iter     <= s3_payload_r.iter + 1'b1;
+            s4_r.c_r      <= s3_payload_r.c_r;
+            s4_r.c_i      <= s3_payload_r.c_i;
+            s4_r.z_r      <= z_r_new_c;
+            s4_r.z_i      <= z_i_new_c;
+            s4_r.overflow <= s3_ovf_r | s4_combine_ovf_c;
+ 
+            s4_escaped_r     <= escaped_c;
+            s4_reached_max_r <= reached_max_c;
+        end
+        // else: advance=0, pipeline holds everything, no register updates
+    end
+
+endmodule
+
+`default_nettype wire
+
