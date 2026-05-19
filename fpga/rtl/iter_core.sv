@@ -177,3 +177,26 @@ module iter_core #(
 
         reached_max_c = ((s3_payload_r.iter + 1'b1) == s3_payload_r.max_iter);
     end
+
+    // recycle / ejecct decision and slot[0] next state
+
+    // either eject if escape or max reached, or recycle for another iter
+
+    logic s4_done_c;
+    logic s4_eject_now_c;
+    logic s4_stall_c;
+
+    assign s4_done_c     = s4_r.valid & (s4_escaped_r | s4_reached_max_r);
+    assign s4_eject_now_c = s4_done_c & out_ready;
+    assign s4_stall_c    = s4_done_c & ~out_ready;
+
+    logic advance;
+    assign advance = ~s4_stall_c; // can advance if not stalled in stage 4
+
+    assign out_valid = s4_done_c;
+    assign out_seq = s4_r.seq;
+    assign out_iter = s4_r.iter;
+    assign out_z_r = s4_r.z_r;
+    assign out_z_i = s4_r.z_i;
+    assign out_escaped = s4_r.escaped;
+    assign out_overflow = s4_r.overflow;
