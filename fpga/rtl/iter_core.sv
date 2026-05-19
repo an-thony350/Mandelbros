@@ -1,6 +1,7 @@
 // 5-stage pipelined fixed-point fractal iteration core.
 // Computes either Tricorn, Burning Ship, Mandelbrot, or Julia iterations based on the mode field
 // Iteration terminates when |z|^2 > 4 (escape) or iter == max_iter (in set).
+// i know the variable naming conventions are a bit suspect, but they make sense if you think hard enough
 
 `default_nettype none
 
@@ -62,7 +63,7 @@ module iter_core #(
     // Pipeline registers: slot[0] = stage 0 input, ..., slot[4] = stage 4
     slot_t s0_r, s1_r, s2_r, s3_r, s4_r;
 
-    // STAGE 1 : apply mode transform to z, prepare multiplier operands
+    // STAGE 0 : apply mode transform to z, prepare multiplier operands
 
     always_comb begin
         unique case (s0_r.mode)
@@ -84,3 +85,59 @@ module iter_core #(
             end
         endcase
     end
+
+    // STAGE 1 : hold the modified z operands
+
+    slot_t s1_payload_r;
+    logic signed [W-1:0] s1_zm_r, s1_zm_i;
+
+
+    localparam int PROD_W = 2*W; // 52
+
+    // Stage 2 registers for the products
+
+    slot_t s2_payload_r;
+
+    logic signed [PROD_W-1:0]    s2_zr2_full_r;   // z_r * z_r  (always >= 0)
+    logic signed [PROD_W-1:0]    s2_zi2_full_r;   // z_i * z_i  (always >= 0)
+    logic signed [PROD_W-1:0]    s2_zrzi_full_r;  // z_r * z_i  (signed)
+
+    // Stage 3 registers for the products shifted down to Q4.22
+
+    slot_t s3_payload_r;
+
+    logic signed [W-1:0] s3_zr2_r;   // z_r^2 in Q4.22
+    logic signed [W-1:0] s3_zi2_r;   // z_i^2 in Q4.22
+    logic signed [W:0]   s3_two_zrzi_r;  // one bit larger as it can overflow
+    logic                s3_ovf_r; // sticky overflow flag for this pixel
+
+    // combinational logic for stage 3 outputs
+
+    localparam logic signed [PROD_W-1:0] ROUND_BIAS = (1 <<< (FRAC - 1)); // for rounding the products when shifting down
+
+    logic signed [PROD_W-1:0]   s2_zr2_round_c, s2_zi2_round_c, s2_zrzi_round_c;
+    logic signed [W-1:0]        zr2_q422_c, zi2_q422_c;
+    logic signed [W:0]          two_zrzi_q523_c;
+    logic                       zr2_ovf_c, zi2_ovf_c, zrzi_ovf_c;
+
+
+    always_comb begin
+        // add rounding bias before shifting down to Q4.22
+        s2_zr2_round_c   = s2_zr2_full_r   + ROUND_BIAS;
+        s2_zi2_round_c   = s2_zi2_full_r   + ROUND_BIAS;
+        s2_zrzi_round_c  = s2_zrzi_full_r  + ROUND_BIAS;
+
+        // slice the Q4.22 version
+        zr2_q422_c       = s2_zr2_round_c[W+FRAC -1 : FRAC];
+        zi2_q422_c       = s2_zi2_round_c[W+FRAC -1 : FRAC];
+        two_zrzi_q523_c  = s2_zrzi_round_c[W+FRAC : FRAC]; // one extra bit for potential overflow
+
+        // check overflow - bit above kept range is either all 0 or 1
+        zr2_ovf_c = ~(&s2_zr2_round_c [PROD_W - 1 : W + FRAC - 1]) | ~(|s2_zr2_round_c [PROD_W - 1 : W + FRAC - 1]);
+
+        zi2_ovf_c = ~(&s2_zi2_round_c [PROD_W - 1 : W + FRAC - 1]) | ~(|s2_zi2_round_c [PROD_W - 1 : W + FRAC - 1]);
+
+        zrzi_ovf_c = ~(&s2_zrzi_round_c [PROD_W - 1 : W + FRAC]) | ~(|s2_zrzi_round_c [PROD_W - 1 : W + FRAC]);
+    end
+
+    
