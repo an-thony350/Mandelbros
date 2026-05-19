@@ -26,7 +26,7 @@ module reorder_buffer#(
     parameter int W      = 26,
     parameter int ITER_W = 16,
     parameter int SEQ_W  = 16,
-    parameter int BUFFER_SIZE = 256
+    parameter int BUFFER_SIZE = 4096
 )(
     input logic                clk,
     input logic                rst,
@@ -83,20 +83,30 @@ assign re_index = exp_seq_num[BUFFER_INDEX-1:0];
 assign out_ready = !valid[wr_index];
 
 
+// Read Path
+
+assign   out_valid = (valid[re_index] && (order_buffer[re_index].in_seq_num == exp_seq_num));
+assign   out_iter_count = order_buffer[re_index].in_iter_count;
+assign   out_seq_num = order_buffer[re_index].in_seq_num;
+assign   out_z_r = order_buffer[re_index].in_z_r;
+assign   out_z_i = order_buffer[re_index].in_z_i;
+assign   out_escaped = order_buffer[re_index].in_escaped;
+assign   out_overflow = order_buffer[re_index].in_overflow;
+
+  
+
 always_ff @(posedge clk) begin
 
     if(rst) begin
         exp_seq_num <= 0;
-        out_valid <= 0;
-        out_iter_count <= 0;
-        out_seq_num    <= 0;
-        out_z_r        <= 0;
-        out_z_i        <= 0;
-        out_escaped    <= 0;
-        out_overflow   <= 0;
         for(int i = 0; i<BUFFER_SIZE; i++) valid[i] <= 0;
     end
     else begin
+
+        if(out_valid && palette_ready) begin
+            valid[re_index] <= 1'b0;
+            exp_seq_num <= exp_seq_num + 1;
+        end
 
         // Write Path
         if(in_valid && out_ready) begin
@@ -108,35 +118,7 @@ always_ff @(posedge clk) begin
             order_buffer[wr_index].in_overflow <=in_overflow;
             valid[wr_index] <= 1'b1;
         end
-
-        // Read Path
-        if(out_valid && palette_ready) begin
-            valid[re_index] <= 1'b0;
-            exp_seq_num     <= exp_seq_num + 1'b1;
-                
-                if (valid[re_index + 1'b1]) begin
-                    out_valid      <= 1'b1;
-                    out_iter_count <= order_buffer[re_index + 1'b1].in_iter_count;
-                    out_seq_num    <= order_buffer[re_index + 1'b1].in_seq_num;
-                    out_z_r        <= order_buffer[re_index + 1'b1].in_z_r;
-                    out_z_i        <= order_buffer[re_index + 1'b1].in_z_i;
-                    out_escaped    <= order_buffer[re_index + 1'b1].in_escaped;
-                    out_overflow   <= order_buffer[re_index + 1'b1].in_overflow;
-                end else begin
-                    out_valid      <= 1'b0;
-                end
-        end
-        else if(valid[re_index]) begin
-            out_valid <= 1'b1;
-            out_iter_count <= order_buffer[re_index].in_iter_count;
-            out_seq_num <= order_buffer[re_index].in_seq_num;
-            out_z_r <= order_buffer[re_index].in_z_r;
-            out_z_i <= order_buffer[re_index].in_z_i;
-            out_escaped <= order_buffer[re_index].in_escaped;
-            out_overflow <= order_buffer[re_index].in_overflow;
-            end
-            else out_valid <= 1'b0;
-    end          
+    end       
 end
             
 endmodule
