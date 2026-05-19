@@ -63,3 +63,24 @@ module iter_core #(
     slot_t s0_r, s1_r, s2_r, s3_r, s4_r;
 
     // STAGE 1 : apply mode transform to z, prepare multiplier operands
+
+    always_comb begin
+        unique case (s0_r.mode)
+            MODE_MANDEL, MODE_JULIA: begin
+                s0_zm_r = s0_r.z_r;
+                s0_zm_i = s0_r.z_i;
+            end
+            MODE_BURNING: begin
+                s0_zm_r = s0_r.z_r[W-1] ? -s0_r.z_r : s0_r.z_r;
+                s0_zm_i = s0_r.z_i[W-1] ? -s0_r.z_i : s0_r.z_i;
+            end
+            MODE_TRICORN: begin
+                s0_zm_r =  s0_r.z_r;
+                s0_zm_i = -s0_r.z_i;
+            end
+            default: begin
+                s0_zm_r = s0_r.z_r;
+                s0_zm_i = s0_r.z_i;
+            end
+        endcase
+    end
