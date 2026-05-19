@@ -37,7 +37,7 @@ module pixel_scheduler #(
     input logic  signed [W-1:0]         y_jump,
     input logic  signed [W-1:0]         x_min, // Used for the graph of the set
     input logic  signed [W-1:0]         y_min,
-    input logic                         last_pixel,
+    output logic                         last_pixel,
 
     // Julia & Selection input parameters
 
@@ -55,9 +55,9 @@ module pixel_scheduler #(
     output logic signed [W-1:0]         c_i  [NUM_CORES],
     output logic signed [W-1:0]         z0_r [NUM_CORES],
     output logic signed [W-1:0]         z0_i [NUM_CORES],
-    output logic [ITER_W-1:0]           out_max_iter [N_CORES],
-    output logic [MODE_W-1:0]           out_mode     [N_CORES],
-    output logic [SEQ_W-1:0]            out_seq      [N_CORES],
+    output logic [ITER_W-1:0]           out_max_iter [NUM_CORES],
+    output logic [MODE_W-1:0]           out_mode     [NUM_CORES],
+    output logic [SEQ_W-1:0]            out_seq      [NUM_CORES],
    
 
 );
@@ -67,7 +67,7 @@ module pixel_scheduler #(
 
 logic [$clog2(NUM_CORES)-1:0] chosen_core;
 logic                         available_core;
-assign available_core = |chosen_core;
+assign available_core = |in_ready;
 
 // see if this can be optimised
 
@@ -83,7 +83,7 @@ end
 
 logic signed [W-1:0]  pixel_c_r;
 logic signed [W-1:0]  pixel_c_i;
-logic signed [W-1:0]  pixel_z0_r,;
+logic signed [W-1:0]  pixel_z0_r;
 logic signed [W-1:0]  pixel_z0_i;
 logic [$clog2(X_RES)-1:0] x;
 logic [$clog2(Y_RES)-1:0] y;
@@ -91,18 +91,19 @@ logic [SEQ_W-1:0]         seq;
 
 // Julia checking logic
 // Note that we assume julia value is at 3'd1
-
-if(in_mode == 3'd1) begin
-    pixel_c_r = jul_c_r;
-    pixel_c_i = jul_c_i;
-    pixel_z0_r = c_r;
-    pixel_z0_i = c_i;
-end
-else begin
-    pixel_c_r = c_r;
-    pixel_c_i = c_i;
-    pixel_z0_r = 26'b0;
-    pixel_z0_i = 26'b0;
+always_comb begin
+    if(in_mode == 3'd1) begin
+        pixel_c_r = jul_c_r;
+        pixel_c_i = jul_c_i;
+        pixel_z0_r = c_r;
+        pixel_z0_i = c_i;
+    end
+    else begin
+        pixel_c_r = c_r;
+        pixel_c_i = c_i;
+        pixel_z0_r = 26'b0;
+        pixel_z0_i = 26'b0;
+    end
 end
 
 // Core parsing logic
