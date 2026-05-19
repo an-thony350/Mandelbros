@@ -75,9 +75,7 @@ localparam int MAX_ITER_VAL = 64;
 
     assign core_out_ready = '1;
 
-    // ----------------------------------------------------------------
     // Fixed-point helpers
-    // ----------------------------------------------------------------
 
     function automatic logic signed [W-1:0] to_q422(input real x);
         return $rtoi(x * (1 << FRAC));
@@ -99,9 +97,7 @@ localparam int MAX_ITER_VAL = 64;
         end
     endfunction
 
-    // ----------------------------------------------------------------
     // Software reference: Mandelbrot only for first integration test
-    // ----------------------------------------------------------------
 
     function automatic int ref_mandelbrot(
         input real c_r,
@@ -134,10 +130,7 @@ localparam int MAX_ITER_VAL = 64;
         return max_iter;
     endfunction
 
-    // ----------------------------------------------------------------
     // DUT: pixel scheduler
-    // This assumes you rename the scheduler ports as described above.
-    // ----------------------------------------------------------------
 
 pixel_scheduler #(
     .NUM_CORES (NUM_CORES),
@@ -175,10 +168,7 @@ pixel_scheduler #(
     .out_seq      (core_seq)
 );
 
-    // ----------------------------------------------------------------
     // DUT: multiple iter_core instances
-    // ----------------------------------------------------------------
-
     genvar gi;
     generate
         for (gi = 0; gi < NUM_CORES; gi++) begin : gen_cores
@@ -216,10 +206,7 @@ pixel_scheduler #(
         end
     endgenerate
 
-    // ----------------------------------------------------------------
     // Scoreboard
-    // ----------------------------------------------------------------
-
     bit seen [0:N_PIXELS-1];
 
     int n_received;
@@ -267,10 +254,7 @@ pixel_scheduler #(
         end
     endtask
 
-    // ----------------------------------------------------------------
     // Main test
-    // ----------------------------------------------------------------
-
     int timeout;
     int i;
     int seq_int;
