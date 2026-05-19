@@ -8,7 +8,7 @@ module colour_palette #(
 
     // Input from reorder buffer
     input  logic                in_valid,
-    output logic                in_ready,
+    output logic                palette_ready,
 
     input  logic [ITER_W-1:0]   in_iter_count,
     input  logic [SEQ_W-1:0]    in_seq_num,
@@ -26,3 +26,4 @@ module colour_palette #(
     output logic [7:0]          out_g,
     output logic [7:0]          out_b
 );
+
