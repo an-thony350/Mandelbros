@@ -1,3 +1,6 @@
+// Ran in Vivado 2023.2, giving 11.1ms -> ~90FPS @ 1280 x 720 with 32 cores at a 0.0064% failure rate
+// Can adjust NUM_CORES and X,Y_RES for faster/smaller or slower/larger tests
+
 `timescale 1ns/1ps
 
 module scheduler_iter_core_tb;
