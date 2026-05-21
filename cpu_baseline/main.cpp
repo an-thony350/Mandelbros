@@ -32,12 +32,15 @@ int main(){
 
 
     std::vector<double> Mandelbrot_Times_NT, Mandelbrot_Times_T;
+    // Picks optimal no. threads-
+    unsigned int num_threads = std::thread::hardware_concurrency();
+    std::cout << "Optimal number of threads: " << num_threads << std::endl;
 
     for(int i = 0; i < 10; i++){
 
         std::cout << "Loop " << i + 1 << " started...\n";
 
-        // Unoptimised loop version
+        // Unoptimised loop version       
         auto Start_Mandelbrot_NT = std::chrono::high_resolution_clock::now();
  
         for(int i = 0; i < ROW_NUM; i++){
@@ -49,17 +52,20 @@ int main(){
         auto End_Mandelbrot_NT = std::chrono::high_resolution_clock::now();
 
         // Threading implementation - using 16 threads
-
+        
         std::vector<std::thread> threads;
-        for(int i = 0; i < 16; i++){
-            threads.push_back(std::thread(Threaded_Mandel_iter,80*i, 79 + 80*i));
+        for(int i = 0; i < num_threads; i++){
+            // Used in case of uneven distribution of row loops for threads
+            int end_row = (i == num_threads - 1) ? ROW_NUM : i*(ROW_NUM/num_threads) + ROW_NUM/num_threads;
+
+            threads.push_back(std::thread(Threaded_Mandel_iter, i*(ROW_NUM/num_threads), end_row));
         }
 
-        for(int i = 0; i < 16; i++){
+        for(int i = 0; i < num_threads; i++){
             threads[i].join();
         }
-
-        auto End_Mandelbrot_T = std::chrono::high_resolution_clock::now();
+        
+        auto End_Mandelbrot_T = std::chrono::high_resolution_clock::now();  
 
         // Timing calculations
 
