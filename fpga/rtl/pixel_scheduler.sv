@@ -26,13 +26,13 @@ module pixel_scheduler #(
     input  logic [NUM_CORES-1:0] in_ready,
     output logic [NUM_CORES-1:0] in_valid,
 
-    output logic signed [W-1:0] c_r          [NUM_CORES],
-    output logic signed [W-1:0] c_i          [NUM_CORES],
-    output logic signed [W-1:0] z0_r         [NUM_CORES],
-    output logic signed [W-1:0] z0_i         [NUM_CORES],
-    output logic [ITER_W-1:0]   out_max_iter [NUM_CORES],
-    output logic [MODE_W-1:0]   out_mode     [NUM_CORES],
-    output logic [SEQ_W-1:0]    out_seq      [NUM_CORES]
+    output logic signed [(W*NUM_CORES)-1:0] c_r,
+    output logic signed [(W*NUM_CORES)-1:0] c_i,
+    output logic signed [(W*NUM_CORES)-1:0] z0_r,
+    output logic signed [(W*NUM_CORES)-1:0] z0_i,
+    output logic [(ITER_W*NUM_CORES)-1:0]   out_max_iter,
+    output logic [(MODE_W*NUM_CORES)-1:0]   out_mode,
+    output logic [(SEQ_W*NUM_CORES)-1:0]    out_seq 
 );
 
     localparam int CORE_IDX_W = (NUM_CORES <= 1) ? 1 : $clog2(NUM_CORES);
@@ -68,7 +68,7 @@ module pixel_scheduler #(
 
         for (int i = 0; i < NUM_CORES; i++) begin
             if (in_ready[i]) begin
-                chosen_core = i[CORE_IDX_W-1:0];
+                chosen_core = CORE_IDX_W'(i);
             end
         end
     end
@@ -90,17 +90,16 @@ module pixel_scheduler #(
 
     generate
         for (genvar gi = 0; gi < NUM_CORES; gi++) begin : core_parse
-            localparam logic [CORE_IDX_W-1:0] CORE_ID = gi[CORE_IDX_W-1:0];
 
-            assign c_r[gi]          = pixel_c_r;
-            assign c_i[gi]          = pixel_c_i;
-            assign z0_r[gi]         = pixel_z0_r;
-            assign z0_i[gi]         = pixel_z0_i;
-            assign out_max_iter[gi] = in_max_iter;
-            assign out_mode[gi]     = in_mode;
-            assign out_seq[gi]      = seq;
+            assign c_r[(gi*W) +: W]               = pixel_c_r;
+            assign c_i[(gi*W) +: W]               = pixel_c_i;
+            assign z0_r[(gi*W) +: W]              = pixel_z0_r;
+            assign z0_i[(gi*W) +: W]              = pixel_z0_i;
+            assign out_max_iter[(gi*ITER_W) +: ITER_W] = in_max_iter;
+            assign out_mode[(gi*MODE_W) +: MODE_W]     = in_mode;
+            assign out_seq[(gi*SEQ_W) +: SEQ_W]        = seq;
 
-            assign in_valid[gi] = dispatch && (chosen_core == CORE_ID);
+            assign in_valid[gi] = dispatch && (chosen_core == gi);
         end
     endgenerate
 
