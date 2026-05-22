@@ -29,7 +29,7 @@ module reorder_buffer_array#(
 )(
     input logic     clk,
     input logic     rst,
-    input logic     palette_ready,
+    input logic  [NUM_CORES-1:0]            palette_ready,
     
     input logic [(ITER_W*NUM_CORES)-1:0]    in_iter_count,
     input logic [(SEQ_W*NUM_CORES)-1:0]     in_seq_num,
@@ -62,7 +62,7 @@ module reorder_buffer_array#(
             ) single_buffer (
                 .clk(clk),
                 .rst(rst),
-                .palette_ready(palette_ready),
+                .palette_ready(palette_ready[i]),
                 
                 .in_iter_count( in_iter_count[(i*ITER_W) +: ITER_W] ),
                 .in_seq_num( in_seq_num[(i*SEQ_W) +: SEQ_W] ),
