@@ -13,10 +13,10 @@ module result_arbiter #(
     input  logic [NUM_CORES-1:0]        core_out_valid,
     output logic [NUM_CORES-1:0]        core_out_ready,
 
-    input  logic [SEQ_W-1:0]            core_out_seq      [NUM_CORES],
-    input  logic [ITER_W-1:0]           core_out_iter     [NUM_CORES],
-    input  logic signed [W-1:0]         core_out_z_r      [NUM_CORES],
-    input  logic signed [W-1:0]         core_out_z_i      [NUM_CORES],
+    input  logic [(SEQ_W*NUM_CORES)-1:0]            core_out_seq,
+    input  logic [(ITER_W*NUM_CORES)-1:0]           core_out_iter,
+    input  logic signed [(W*NUM_CORES)-1:0]         core_out_z_r,
+    input  logic signed [(W*NUM_CORES)-1:0]         core_out_z_i,
     input  logic [NUM_CORES-1:0]        core_out_escaped,
     input  logic [NUM_CORES-1:0]        core_out_overflow,
 
@@ -92,10 +92,10 @@ module result_arbiter #(
         rob_in_overflow   = 1'b0;
 
         if (selected_valid) begin
-            rob_in_iter_count = core_out_iter[selected_idx];
-            rob_in_seq_num    = core_out_seq[selected_idx];
-            rob_in_z_r        = core_out_z_r[selected_idx];
-            rob_in_z_i        = core_out_z_i[selected_idx];
+            rob_in_iter_count = core_out_iter[(selected_idx*ITER_W) +: ITER_W];
+            rob_in_seq_num    = core_out_seq[(selected_idx*SEQ_W) +: SEQ_W];
+            rob_in_z_r        = core_out_z_r[(selected_idx*W) +: W];
+            rob_in_z_i        = core_out_z_i[(selected_idx*W) +: W];
             rob_in_escaped    = core_out_escaped[selected_idx];
             rob_in_overflow   = core_out_overflow[selected_idx];
         end
