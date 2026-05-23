@@ -25,7 +25,7 @@
 module reorder_buffer#(
     parameter int W      = 26,
     parameter int ITER_W = 16,
-    parameter int SEQ_W  = 16,
+    parameter int SEQ_W  = 20,
     parameter int BUFFER_SIZE = 4096
 )(
     input logic                clk,

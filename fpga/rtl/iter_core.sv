@@ -8,7 +8,7 @@
 module iter_core #(
     parameter int W       = 26,    
     parameter int FRAC    = 22,    
-    parameter int SEQ_W   = 16,    
+    parameter int SEQ_W   = 20,    
     parameter int ITER_W  = 16,    
     parameter int MODE_W  = 3,     
     parameter logic [W-1:0] ESCAPE_THRESH_Q422 = 26'sh100_0000  
