@@ -6,7 +6,7 @@
 		// Users to add parameters here
         parameter integer NUM_CORES = 32, 
         parameter integer W         = 26, 
-        parameter integer SEQ_W     = 16, 
+        parameter integer SEQ_W     = 20, 
         parameter integer ITER_W    = 16, 
         parameter integer MODE_W    = 3,  
         parameter integer X_RES     = 1280,

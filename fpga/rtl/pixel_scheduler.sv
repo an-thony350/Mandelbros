@@ -3,7 +3,7 @@
 module pixel_scheduler #(
     parameter int NUM_CORES = 32,
     parameter int W         = 26,
-    parameter int SEQ_W     = 16,
+    parameter int SEQ_W     = 20,
     parameter int ITER_W    = 16,
     parameter int MODE_W    = 3,
     parameter int X_RES     = 1280,
