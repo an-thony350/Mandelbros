@@ -63,10 +63,10 @@ always_ff @(posedge clk) begin
     end
     else begin
         if(sof_pulse) begin
-            snap_frame_cycles   <= live_frame_cycles;
-            snap_total_iters    <= live_total_iters;
-            snap_pixels_escaped <= live_pixels_escaped;
-            snap_pixels_hit_max <= live_pixels_hit_max;
+            snap_frame_cycles   <= tmp_frame_cycles;
+            snap_total_iters    <= tmp_total_iters;
+            snap_pixels_escaped <= tmp_pixels_escaped;
+            snap_pixels_hit_max <= tmp_pixels_hit_max;
 
             tmp_frame_cycles <= 0;
             tmp_total_iters <= 0;
@@ -74,17 +74,17 @@ always_ff @(posedge clk) begin
             tmp_pixels_hit_max <= 0;
         end
         else begin
-            live_frame_cycles <= live_frame_cycles + 1'b1;
+            tmp_frame_cycles <= tmp_frame_cycles + 1'b1;
 
             if (stream_valid && stream_ready) begin
-                live_total_iters <= live_total_iters + pixel_iter;
+                tmp_total_iters <= tmp_total_iters + pixel_iter;
                     
                 if (pixel_escaped) begin
-                    live_pixels_escaped <= live_pixels_escaped + 1'b1;
+                    tmp_pixels_escaped <= tmp_pixels_escaped + 1'b1;
                 end
                     
                 if (pixel_hit_max) begin
-                    live_pixels_hit_max <= live_pixels_hit_max + 1'b1;
+                    tmp_pixels_hit_max <= tmp_pixels_hit_max + 1'b1;
                 end
             end
         end
