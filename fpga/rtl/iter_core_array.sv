@@ -29,17 +29,31 @@ module iter_core_array #(
     output wire [NUM_CORES-1:0]          in_ready,
 
     // Inputs from Reorder Buffer
-    input  wire [NUM_CORES-1:0]          out_ready,
+    input  wire               out_ready,
 
     // Outputs to Reorder Buffer
-    output wire [NUM_CORES-1:0]          out_valid,
-    output wire [(SEQ_W*NUM_CORES)-1:0]  out_seq,
-    output wire [(ITER_W*NUM_CORES)-1:0] out_iter,
-    output wire [(W*NUM_CORES)-1:0]      out_z_r,
-    output wire [(W*NUM_CORES)-1:0]      out_z_i,
-    output wire [NUM_CORES-1:0]          out_escaped,
-    output wire [NUM_CORES-1:0]          out_overflow
+    output wire               out_valid,
+    output wire  [SEQ_W-1:0]  out_seq,
+    output wire  [ITER_W-1:0] out_iter,
+    output wire  [W-1:0]      out_z_r,
+    output wire  [W-1:0]      out_z_i,
+    output wire               out_escaped,
+    output wire               out_overflow
 );
+
+// Internal wires for core->arbiter connection
+
+logic [NUM_CORES-1:0] core_out_valid;
+logic [NUM_CORES-1:0] core_out_ready;
+logic [(SEQ_W*NUM_CORES)-1:0] core_out_seq;
+logic [(ITER_W*NUM_CORES)-1:0] core_out_iter;
+logic [(W*NUM_CORES)-1:0] core_out_z_r;
+logic [(W*NUM_CORES)-1:0] core_out_z_i;
+logic [(W*NUM_CORES)-1:0] core_out_escaped;
+logic [(W*NUM_CORES)-1:0] core_out_overflow;
+
+// iter_core blocks
+
 
     generate
         for (genvar i = 0; i < NUM_CORES; i++) begin : core_gen
@@ -83,5 +97,33 @@ module iter_core_array #(
             
         end
     endgenerate
+
+
+    result_arbiter#(
+        .NUM_CORES(NUM_CORES),
+        .W(W),
+        .ITER_W(ITER_W),
+        .SEQ_w(SEQ_W)
+    ) arbiter(
+        .clk(clk),
+        .rst(rst),
+        .core_out_valid(core_out_valid),
+        .core_out_ready(core_out_ready),
+        .core_out_seq(core_out_seq),
+        .core_out_iter(core_out_iter),
+        .core_out_z_r(core_out_z_r),
+        .core_out_z_i(core_out_z_i),
+        .core_out_escaped(core_out_escaped),
+        .core_out_overflow(core_out_overflow),
+        
+        .rob_in_valid(out_valid),
+        .rob_in_ready(out_ready),
+        .rob_in_iter_count(out_iter_count),
+        .rob_in_seq_num(out_seq),
+        .rob_in_z_r(out_z_r),
+        .rob_in_z_i(out_z_i),
+        .rob_in_escaped(out_escaped),
+        .rob_in_overflow(out_overflow)
+    );
 
 endmodule
