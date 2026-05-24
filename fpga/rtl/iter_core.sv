@@ -1,11 +1,30 @@
-`timescale 1ns/1ps
+`timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company: 
+// Engineer: 
+// 
+// Create Date: 21.05.2026 16:44:53
+// Design Name: 
+// Module Name: iter_core
+// Project Name: 
+// Target Devices: 
+// Tool Versions: 
+// Description: 
+// 
+// Dependencies: 
+// 
+// Revision:
+// Revision 0.01 - File Created
+// Additional Comments:
+// 
+//////////////////////////////////////////////////////////////////////////////////
+
 
 // 7-stage pipelined fixed-point fractal iteration core.
 // Computes either Tricorn, Burning Ship, Mandelbrot, or Julia iterations based on the mode field
 // Iteration terminates when |z|^2 > 4 (escape) or iter == max_iter (in set).
 // i know the variable naming conventions are a bit suspect, but they make sense if you think hard enough
 
-`default_nettype none
 
 module iter_core #(
     parameter int W       = 26,    
@@ -71,15 +90,15 @@ module iter_core #(
 
     // Multiply M register (specify DSP for synthesis)
     slot_t s2_payload_r;
-    (* use_dsp = "yes" *) logic signed [PROD_W-1:0] s2_zr2_m_r;
-    (* use_dsp = "yes" *) logic signed [PROD_W-1:0] s2_zi2_m_r;
-    (* use_dsp = "yes" *) logic signed [PROD_W-1:0] s2_zrzi_m_r;
+     logic signed [PROD_W-1:0] s2_zr2_m_r;
+     logic signed [PROD_W-1:0] s2_zi2_m_r;
+     logic signed [PROD_W-1:0] s2_zrzi_m_r;
 
     // Multiply P register (specify DSP for synthesis)
     slot_t s3_payload_r;
-    (* use_dsp = "yes" *) logic signed [PROD_W-1:0] s3_zr2_p_r;
-    (* use_dsp = "yes" *) logic signed [PROD_W-1:0] s3_zi2_p_r;
-    (* use_dsp = "yes" *) logic signed [PROD_W-1:0] s3_zrzi_p_r;
+    logic signed [PROD_W-1:0] s3_zr2_p_r;
+    logic signed [PROD_W-1:0] s3_zi2_p_r;
+    logic signed [PROD_W-1:0] s3_zrzi_p_r;
 
     // Rounded-back-to-Q4.22 squares + sticky overflow flag
     slot_t s4_payload_r;
@@ -358,5 +377,3 @@ module iter_core #(
     end
 
 endmodule
-
-`default_nettype wire

@@ -1,7 +1,28 @@
 `timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company: 
+// Engineer: 
+// 
+// Create Date: 23.05.2026 12:34:37
+// Design Name: 
+// Module Name: arbiter
+// Project Name: 
+// Target Devices: 
+// Tool Versions: 
+// Description: 
+// 
+// Dependencies: 
+// 
+// Revision:
+// Revision 0.01 - File Created
+// Additional Comments:
+// 
+//////////////////////////////////////////////////////////////////////////////////
 
+// required
+(* keep_hierarchy = "yes" *)
 module result_arbiter #(
-    parameter int NUM_CORES = 32,
+    parameter int NUM_CORES = 16,
     parameter int W         = 26,
     parameter int ITER_W    = 16,
     parameter int SEQ_W     = 20
@@ -10,26 +31,26 @@ module result_arbiter #(
     input logic rst,
 
     // Inputs from all iter_cores
-    input  logic [NUM_CORES-1:0]        core_out_valid,
-    output logic [NUM_CORES-1:0]        core_out_ready,
+    input  logic [NUM_CORES-1:0]                core_out_valid,
+    output logic [NUM_CORES-1:0]                core_out_ready,
 
-    input  logic [(SEQ_W*NUM_CORES)-1:0]            core_out_seq,
-    input  logic [(ITER_W*NUM_CORES)-1:0]           core_out_iter,
-    input  logic signed [(W*NUM_CORES)-1:0]         core_out_z_r,
-    input  logic signed [(W*NUM_CORES)-1:0]         core_out_z_i,
-    input  logic [NUM_CORES-1:0]        core_out_escaped,
-    input  logic [NUM_CORES-1:0]        core_out_overflow,
+    input  logic [(SEQ_W*NUM_CORES)-1:0]        core_out_seq,
+    input  logic [(ITER_W*NUM_CORES)-1:0]       core_out_iter,
+    input  logic signed [(W*NUM_CORES)-1:0]     core_out_z_r,
+    input  logic signed [(W*NUM_CORES)-1:0]     core_out_z_i,
+    input  logic [NUM_CORES-1:0]                core_out_escaped,
+    input  logic [NUM_CORES-1:0]                core_out_overflow,
 
     // Output to reorder_buffer
-    output logic                        rob_in_valid,
-    input  logic                        rob_in_ready,
+    output logic                                rob_in_valid,
+    input  logic                                rob_in_ready,
 
-    output logic [ITER_W-1:0]           rob_in_iter_count,
-    output logic [SEQ_W-1:0]            rob_in_seq_num,
-    output logic signed [W-1:0]         rob_in_z_r,
-    output logic signed [W-1:0]         rob_in_z_i,
-    output logic                        rob_in_escaped,
-    output logic                        rob_in_overflow
+    output logic [ITER_W-1:0]                   rob_in_iter_count,
+    output logic [SEQ_W-1:0]                    rob_in_seq_num,
+    output logic signed [W-1:0]                 rob_in_z_r,
+    output logic signed [W-1:0]                 rob_in_z_i,
+    output logic                                rob_in_escaped,
+    output logic                                rob_in_overflow
 );
 
     localparam int CORE_IDX_W = (NUM_CORES <= 1) ? 1 : $clog2(NUM_CORES);
@@ -45,10 +66,24 @@ module result_arbiter #(
     logic [CORE_IDX_W-1:0] selected_idx;
     logic                  selected_valid;
 
+    // Unpacking flat 1D arrays into 2D arrays using constant indexing - solves Vivado errors
+    logic [SEQ_W-1:0]    seq_2d  [NUM_CORES];
+    logic [ITER_W-1:0]   iter_2d [NUM_CORES];
+    logic signed [W-1:0] z_r_2d  [NUM_CORES];
+    logic signed [W-1:0] z_i_2d  [NUM_CORES];
+
+    always_comb begin
+        for (int i = 0; i < NUM_CORES; i++) begin
+            seq_2d[i]  = core_out_seq[(i*SEQ_W) +: SEQ_W];
+            iter_2d[i] = core_out_iter[(i*ITER_W) +: ITER_W];
+            z_r_2d[i]  = core_out_z_r[(i*W) +: W];
+            z_i_2d[i]  = core_out_z_i[(i*W) +: W];
+        end
+    end
+
     // Round-robin grant selection
     always_comb begin
         int candidate;
-
         grant_valid = 1'b0;
         grant_idx   = '0;
 
@@ -66,8 +101,6 @@ module result_arbiter #(
         end
     end
 
-    // If holding a previous unaccepted grant, keep using it.
-    // Otherwise use the current round-robin grant.
     always_comb begin
         if (hold_valid) begin
             selected_valid = 1'b1;
@@ -79,8 +112,7 @@ module result_arbiter #(
         end
     end
 
-    // Drive selected data to reorder buffer
-
+    // DATA MUX: Safely index the 2D arrays (No variable part-selects)
     always_comb begin
         rob_in_valid      = selected_valid;
 
@@ -92,26 +124,27 @@ module result_arbiter #(
         rob_in_overflow   = 1'b0;
 
         if (selected_valid) begin
-            rob_in_iter_count = core_out_iter[(selected_idx*ITER_W) +: ITER_W];
-            rob_in_seq_num    = core_out_seq[(selected_idx*SEQ_W) +: SEQ_W];
-            rob_in_z_r        = core_out_z_r[(selected_idx*W) +: W];
-            rob_in_z_i        = core_out_z_i[(selected_idx*W) +: W];
+            rob_in_iter_count = iter_2d[selected_idx];
+            rob_in_seq_num    = seq_2d[selected_idx];
+            rob_in_z_r        = z_r_2d[selected_idx];
+            rob_in_z_i        = z_i_2d[selected_idx];
             rob_in_escaped    = core_out_escaped[selected_idx];
             rob_in_overflow   = core_out_overflow[selected_idx];
         end
     end
 
-    // Ready goes only to the selected core
-    always_comb begin
-        core_out_ready = '0;
+    // READY DEMUX: Explicit assignment to prevent synthesizer loops
 
-        if (selected_valid) begin
-            core_out_ready[selected_idx] = rob_in_ready;
+    always_comb begin
+        for (int i = 0; i < NUM_CORES; i++) begin
+            if (selected_valid && (selected_idx == i)) begin
+                core_out_ready[i] = rob_in_ready;
+            end else begin
+                core_out_ready[i] = 1'b0;
+            end
         end
     end
 
-    // Hold grant if reorder buffer is not ready.
-    // Advance round-robin pointer only after successful transfer.
     always_ff @(posedge clk) begin
         if (rst) begin
             rr_ptr     <= '0;
@@ -127,7 +160,7 @@ module result_arbiter #(
                     rr_ptr <= '0;
                 end
                 else begin
-                    rr_ptr <= selected_idx + 1'b1;
+                    rr_ptr <= (CORE_IDX_W)'(selected_idx + 1'b1);
                 end
             end
             else if (!hold_valid && grant_valid && !rob_in_ready) begin
