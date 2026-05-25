@@ -92,7 +92,11 @@ Design Decisions:
 
 - The packer is the same as was provided in the project brief
 
-- We have performance counters which will be used later on to compare with the baseline. 
+- We have performance counters which will be used later on to compare with the baseline.
+
+- We included a wrapper to the iter_core block given the "array style" inputs we had implemented in our original design
+
+- We also included a skid buffer to ensure we had correct passing of data through the cores to the arbiter without causing signals between cores to intersect eachother
 
 #### Testbenches
 
@@ -131,13 +135,34 @@ The study compares different fixed-point formats and considers the trade-off bet
 - maximum zoom depth
 
 From this, we chose to use a Q4.22-style representation for the main complex-number datapath. This gives 26-bit signed fixed-point values, with enough fractional precision for the current MVP while keeping the arithmetic manageable for the PYNQ-Z1.
+ 
 
 More detail is available in the dedicated precision write-up: [Number Precision Study](../studies/number_format/README.md).
+
+In starting the CPU_baseline design, the following implementations were made:
+
+- The formation of a naive single-threaded approach to understand a worst-case scenario.
+
+- A multi-threaded approach to obtain the best-case cpu scenario, both with actual manual tests and a C++ `std::thread::hardware_concurrency()` insturction to obtain the optimal number of threads for latency reduction
+
+- Functions allowing for the calculation of multiple sets mirroring those in `iter_core_tb.sv`
 
 ### PS start
 
 Since the RTL is still not complete, we haven't started proper work on the PS side yet. We looked a little into displaying a Mandelbrot set through the PYNQ board, but not much further that that. The notebook can be seen here: [Basic Display](../../notebooks/1_basic_display.ipynb).
 
 ### Updates to Plan/Timeline and Evaluation
+
+In terms of the RTL, the next steps for the following week are as such:
+
+- **Have a working display** - This is a core goal that we plan to have achieved ASAP
+
+- Timing analysis between hardware & software based designs - average speedup/ total latency calculations of our v1 design
+
+- Cleaned up cpu_baseline - i.e. separate filing for timing analysis and actual implementation - low priority but still should be achieved
+
+- Resource optimisation of the v1 design - crucial as this allows us to implement extension ideas without worrying about resource demand
+
+- Extension & Presentation Planning - Interim presentations are coming up in a weeks time therfore having a plan of what we will present and how we plan to expand our base design is key
 
 ## EEE Team
