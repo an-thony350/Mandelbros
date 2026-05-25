@@ -120,8 +120,6 @@ Testbenches implemented:
 
 Overall, the testbenches now cover both individual module behaviour and larger subsystem integration. This gives us much more confidence that the compute pipeline works before moving to synthesis, implementation, and hardware testing.
 
-### CPU Baseline
-
 ### Number Precision Study
 
 A separate number precision study was carried out to decide what fixed-point format should be used for the fractal calculations. This was important because the design needs enough precision for visually stable zooming, while still fitting efficiently on the FPGA.
@@ -138,6 +136,8 @@ From this, we chose to use a Q4.22-style representation for the main complex-num
  
 
 More detail is available in the dedicated precision write-up: [Number Precision Study](../studies/number_format/README.md).
+
+### CPU Baseline
 
 In starting the CPU_baseline design, the following implementations were made:
 

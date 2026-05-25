@@ -47,53 +47,8 @@ These are load-bearing. Everything else follows.
 
 ## 2. System block diagram
 
-```
-Custom controller PCB (RP2040)
-        │
-        │ USB CDC serial @ 100 Hz
-        ▼
-PYNQ-Z1 USB host port
-        │
-        ▼
-┌──────────────────────────────────────────────────────────┐
-│ PS side: ARM Cortex-A9 dual-core @ 650 MHz, Linux+PYNQ   │
-│                                                          │
-│   controller_driver ──► scene_manager ──► fpga_driver    │
-│                              │                           │
-│                              ▼                           │
-│                        app_state                         │
-│                              │                           │
-│                              ▼                           │
-│                        ui_renderer (NumPy)               │
-└──────────────────────────────────────────────────────────┘
-        │ AXI-Lite (register writes)
-        ▼
-┌──────────────────────────────────────────────────────────┐
-│ PL side: programmable logic                              │
-│                                                          │
-│   AXI-Lite slave ──► shadow regs ──► (SOF) ──► working   │
-│                                                  │       │
-│                                                  ▼       │
-│   pixel scheduler ──► [iter core × N] ──► reorder buf    │
-│                                                  │       │
-│                                                  ▼       │
-│                                          palette LUT     │
-│                                                  │       │
-│                                                  ▼       │
-│                                          AXI-Stream out  │
-└──────────────────────────────────────────────────────────┘
-        │ AXI-Stream
-        ▼
-   VDMA writer (existing overlay) ──► DDR framebuffer
-                                            │
-                                            ▼
-                                  HDMI DMA reader (existing)
-                                            │
-                                            ▼
-                                       HDMI output ──► Monitor
-```
+![Mandelbrot on PYNQ](../assets/system_diagram.png)
 
-The two existing-overlay pieces (VDMA writer, HDMI DMA reader) are not modified.
 
 ---
 
@@ -110,49 +65,6 @@ The two existing-overlay pieces (VDMA writer, HDMI DMA reader) are not modified.
 
 - Typical view, avg ~60 iter/pixel: 3.3 G iter/s for 60 FPS.
 - Worst case (every pixel hits max_iter = 256): 14.2 G iter/s for 60 FPS.
-
-### 3.3 Capacity
-
-At 100 MHz with one iteration per cycle per core: each core delivers 100 M iter/s.
-
-We headline "60 FPS typical exploration with graceful degradation". Adaptive max_iter keeps panning responsive even on pathological views.
-
-### 3.4 DSP / BRAM / LUT budget (XC7Z020: 220 DSP48E1, 140 BRAM18, 53,200 LUTs, 106,400 FFs)
-
-Per Mandelbrot core (Q4.22): 6 DSPs, ~400 LUTs, ~500 FFs, 0 BRAM.
-
-| Configuration | DSPs | LUTs | Notes |
-|---|---|---|---|
-| 16 z² cores | 96 | 6.4K | comfortable |
-| 24 z² cores | 144 | 9.6K | comfortable |
-| 32 z² cores | 192 | 12.8K | margin getting thin |
-| + 8 z³ cores (Multibrot) | +112 | +6K | total 256 DSPs at 32+8 — DOES NOT FIT |
-| 16 z² + 8 z³ cores | 208 | 12.4K | the realistic ceiling if we keep Multibrot |
-
-Multibrot3 needs ~14 DSPs/core. With 220 DSPs total we cannot have 32 z² cores *and* 8 z³ cores. Decision: ship **24 z² cores + 8 z³ cores = 256 DSPs** if z³ shares ~36 DSPs with z² via mode muxing; otherwise drop to **24 z² + 4 z³ = 200 DSPs** with z³ mode producing visibly lower FPS (mentioned in UI). Either path works; we make the final call in Week 3 based on what fits.
-
-Other consumers (palette LUT ~1 BRAM, reorder buffer ~1 BRAM, font/overlay ~1–2 BRAM, regfile ~200 LUTs, scheduler ~500 LUTs, existing base overlay ~5K LUTs) all fit comfortably.
-
-### 3.5 Timing closure plan
-
-100 MHz target = 10 ns period. Iteration pipeline is 5 stages:
-
-```
-Stage 0: read working regs (z_r, z_i, c_r, c_i, iter_count)
-Stage 1: multiply z_r·z_r, z_i·z_i, z_r·z_i  (DSP M-register)
-Stage 2: continue multiply                   (DSP M-register)
-Stage 3: register multiply outputs           (DSP P-register)
-Stage 4: subtract/add for z_new, compare |z|² to 4,
-         increment iter, writeback
-```
-
-DSP48E1 needs all internal registers (A1, A2, M, P) enabled to reach 100 MHz on 26×26 signed multiplication. Set `(* use_dsp = "yes" *)` on all multiplier expressions. Register the comparator output before feeding back.
-
-### 3.6 Pixel scheduling
-
-Each cycle the pixel scheduler issues one new pixel `(x, y, seq)` to whichever core is free, in raster order. The core executes its pipeline; when a pixel either escapes or hits max_iter, it exits with `(seq_num, iter_count, smooth_value)`. The reorder buffer holds completed pixels keyed by sequence number; the stream output emits them in sequence order, stalling its downstream AXI-Stream `valid` when the next expected pixel hasn't arrived.
-
-Reorder buffer sized as a **bounded out-of-order window** of 256 entries × 32 bits = 1 KB, fits in part of a BRAM. Inside-heavy regions stall the scheduler — correct backpressure.
 
 ---
 
@@ -175,157 +87,11 @@ Sticky `overflow_seen` bit in AXI-Lite STATUS register. Set when any iteration's
 
 ### 5.1 Top-level structure
 
-```
-pixel_generator.v
-├── axi_lite_slave
-│   └── regfile (shadow)
-├── sof_latch ── copies shadow → working on SOF
-│   └── regfile (working)
-├── pixel_scheduler ── issues (x, y, seq) to cores
-├── iter_core_quad[0..23]   (Mandelbrot/Julia/BS/Tricorn — mode select)
-├── iter_core_cubic[0..7]   (Multibrot3 — separate DSP-heavier core)
-├── logistic_engine         (separate compute, writes histogram BRAM)
-├── reorder_buffer
-├── palette_lut             (BRAM, PS-writable at boot)
-├── stream_output           (drives AXI-Stream master)
-└── overlay_compositor      (text + crosshair, stretch)
-```
-
-### 5.2 Register map
-
-| Addr | Name | Type | Notes |
-|---|---|---|---|
-| 0x00 | CONTROL | RW | bit0 enable_render, bit1 reset_overflow, bit2 adaptive_iter_en |
-| 0x04 | STATUS | RO | bit0 sof_seen, bit1 overflow_seen, bit2 frame_in_progress |
-| 0x08 | FRACTAL_TYPE | RW | 0 Mandelbrot, 1 Julia, 2 Burning Ship, 3 Tricorn, 4 Multibrot3, 5 Logistic |
-| 0x0C | X_MIN | RW | Q4.22, top-left of view |
-| 0x10 | Y_MIN | RW | Q4.22 |
-| 0x14 | X_STEP | RW | Q4.22, per-pixel x increment |
-| 0x18 | Y_STEP | RW | Q4.22 |
-| 0x1C | C_REAL | RW | Q4.22, Julia parameter |
-| 0x20 | C_IMAG | RW | Q4.22, Julia parameter |
-| 0x24 | MAX_ITER | RW | u16 |
-| 0x28 | PALETTE_ID | RW | u8 |
-| 0x2C | ACTUAL_MAX_ITER | RO | what FPGA actually used last frame |
-| 0x30 | FRAME_CYCLES | RO | cycles to render last frame |
-| 0x34 | PIXELS_ESCAPED | RO | count of escaped pixels last frame |
-| 0x38 | PIXELS_HIT_MAX | RO | count of pixels reaching MAX_ITER |
-| 0x3C | DEBUG_REG | RW | scratch |
-
-### 5.3 Iteration cores
-
-**`iter_core_quad`** — z² modes (Mandelbrot, Julia, Burning Ship, Tricorn):
-
-```systemverilog
-module iter_core_quad #(
-    parameter int unsigned WIDTH = 26,
-    parameter int unsigned FRAC  = 22
-) (
-    input  logic                       clk,
-    input  logic                       rst_n,
-    input  logic                       in_valid,
-    output logic                       in_ready,
-    input  logic [15:0]                in_seq,
-    input  logic signed [WIDTH-1:0]    in_c_real,
-    input  logic signed [WIDTH-1:0]    in_c_imag,
-    input  logic signed [WIDTH-1:0]    in_z0_real,
-    input  logic signed [WIDTH-1:0]    in_z0_imag,
-    input  logic [15:0]                in_max_iter,
-    input  logic [1:0]                 in_mode,   // 0..3
-    output logic                       out_valid,
-    input  logic                       out_ready,
-    output logic [15:0]                out_seq,
-    output logic [15:0]                out_iter,
-    output logic signed [WIDTH-1:0]    out_z_real_final,
-    output logic signed [WIDTH-1:0]    out_z_imag_final,
-    output logic                       out_overflow
-);
-```
-
-Input-stage mode handling:
-- Mandelbrot (0): `z_r, z_i = 0`; `c_r, c_i = pixel`.
-- Julia (1): `z_r, z_i = pixel`; `c_r, c_i = register`.
-- Burning Ship (2): like Mandelbrot but `z_r ← |z_r|, z_i ← |z_i|` before squaring.
-- Tricorn (3): like Mandelbrot but `z_i ← -z_i` before squaring.
-
-**`iter_core_cubic`** : z³ + c (Multibrot3). z³ needs `z_r², z_i², z_r·z_i, z_r³, z_i³` plus one more cross term — 7 multiplies vs 3, so 14 DSPs per core. Instantiate ~8 of these. Multibrot mode uses these cores exclusively; quad cores idle. Multibrot will render at lower FPS than the quad family.
-
-**`logistic_engine`**
-
-### 5.4 Logistic map mode
-
-Doesn't fit the per-pixel iteration model. Architecture:
-
-- X axis = parameter r in [2.4, 4.0].
-- Y axis = state x in [0, 1].
-- Each column: pick r from x position, iterate `x_{n+1} = r·x_n·(1-x_n)` for ~1000 steps to settle, then ~500 more steps plotting every visited y-value into a 2D histogram BRAM.
-
-`logistic_engine` is a small dedicated state machine + a histogram BRAM. Compute is ~16 columns in parallel (one mult-add per column per cycle). At 100 MHz and 1500 iterations per column, full 1280 columns complete in ~120 ms — i.e. ~8 FPS for fresh logistic frames, fine for a static-image educational view (not interactive panning).
-
-The pixel stream output reads the histogram BRAM in raster order when `FRACTAL_TYPE = 5`. Same palette LUT, same stream output, same VDMA path.
-
-### 5.5 Colour mapping
-
-After exit with iter_count and final `|z|`:
-
-1. If iter_count == max_iter: output the "inside" colour (typically black).
-2. Else compute smooth: `μ = iter_count + 1 - log₂(log₂(|z|²))`. Implement log₂ via leading-zero detection (integer part) + 5-bit fractional LUT.
-3. Index palette LUT with `μ`. Palette is 1024 × 24-bit RGB in BRAM, PS-writable at startup.
-
-Six palettes (educational, high contrast, smooth gradient, monochrome, fire, ocean) selectable by PALETTE_ID. 1 KiB each; six fit in one BRAM18.
-
-### 5.6 Start-of-frame latching
-
-```systemverilog
-// shadow regs receive AXI-Lite writes
-// working regs are read by the iteration cores
-// transfer on SOF
-
-logic sof_pulse;
-assign sof_pulse = (pixel_x == 0) && (pixel_y == 0) && stream_advance;
-
-always_ff @(posedge clk) begin
-    if (sof_pulse) begin
-        working_regs <= shadow_regs;
-    end
-end
-```
-
-Entire parameter-commit protocol. Compare with the render-job machinery in earlier drafts.
-
-### 5.7 Performance counters
-
-Five free-running, reset at SOF: `frame_cycles`, `pixels_escaped`, `pixels_hit_max`, `total_iterations`, `max_pipeline_occupancy`. PS reads after each frame; drives the benchmark UI and the ACTUAL_MAX_ITER feedback loop.
-
----
+...
 
 ## 6. Software architecture (PS side)
 
-### 6.1 Module structure
-
-```
-fractalscope/
-├── main.py                  # entry point, event loop
-├── controller_driver.py     # USB CDC packet parser
-├── app_state.py             # canonical state
-├── scene_manager.py         # tutorial/explorer state machine
-├── fpga_driver.py           # MMIO wrapper, parameter conversion
-├── ui_renderer.py           # NumPy-based overlay drawing
-├── benchmark.py             # CPU baseline + comparison
-├── assets/                  # pre-rendered equation PNGs, fonts
-└── scenes/
-    ├── scene_recurrence.py
-    ├── scene_complex_plane.py
-    ├── scene_escape.py
-    ├── scene_pixel_colour.py
-    ├── scene_mandelbrot.py
-    ├── scene_julia.py
-    └── scene_library.py
-```
-
-**Hard rule: no per-pixel Python loops anywhere in overlay drawing.** Anything that touches every pixel uses NumPy vectorised ops or pre-rendered assets. Code review on every PR enforces this.
-
-### 6.2 State machine
+### 6.1 State machine
 
 ```
 BOOT → INIT_HARDWARE → MAIN_MENU
@@ -341,26 +107,7 @@ BOOT → INIT_HARDWARE → MAIN_MENU
 
 Single authoritative `app_state` object. All transitions explicit. No "current mode" lookup outside the state machine module.
 
-### 6.3 Parameter conversion
-
-```python
-def view_to_registers(center_r, center_i, zoom, width=1280, height=720):
-    view_width  = 4.0 / zoom
-    view_height = view_width * height / width
-    return {
-        'X_MIN':   to_q4_22(center_r - view_width  / 2),
-        'Y_MIN':   to_q4_22(center_i - view_height / 2),
-        'X_STEP':  to_q4_22(view_width  / width),
-        'Y_STEP':  to_q4_22(view_height / height),
-    }
-
-def to_q4_22(x):
-    return int(round(x * (1 << 22))) & 0x03FFFFFF
-```
-
-PS owns floating point. FPGA receives signed integers. Documented in the register map document.
-
-### 6.4 Boot
+### 6.2 Boot
 
 systemd unit starts the app at boot:
 1. Load the FPGA overlay via PYNQ.
@@ -375,7 +122,7 @@ User never sees a Linux prompt. Demo-ready boot in under 60 seconds.
 
 ## 7. Custom controller
 
-### 7.1 Hardware (BOM, to order Friday 22 May)
+### 7.1 Hardware 
 
 - RP2040 module (Pico or RP2040 chip + crystal + decoupling on the PCB): ~£4
 - 2× quadrature encoders with detents (zoom, max_iter): ~£12
@@ -408,33 +155,29 @@ FSCP,<seq>,<btn_hex>,<zoom_d>,<iter_d>,<jx>,<jy>,<knob0>,<knob1>,<crc>\n
 ```
 Example: `FSCP,4521,01A0,+2,-1,128,-64,2048,3072,7F`
 
-Frozen end of Week 1, alongside the register map. `controller_driver.py` and the firmware are written against this document.
-
 ---
 
 ## 8. Educational content (walkthrough)
 
-Top-level rubric item. Treat as a deliverable, not UI flourish.
-
-### Scene 1 — Recurrence on the real line
+### Scene 1: Recurrence on the real line
 PS-drawn number line, animated dot bouncing through `x → x² + c` with real `c`. Inputs: knob 0 sets c, NEXT advances.
 
-### Scene 2 — Recurrence on the complex plane
+### Scene 2: Recurrence on the complex plane
 PS-drawn complex plane, point c, animated orbit trail. Inputs: joystick moves c, NEXT advances.
 
-### Scene 3 — Escape radius
+### Scene 3: Escape radius
 PS-drawn plane with the |z|=2 circle highlighted. Orbit stays in forever or breaks out. Brief on-screen note: |z|>2 ⟹ escape. Inputs: joystick moves c, NEXT.
 
-### Scene 4 — Pixel = c
+### Scene 4: Pixel = c
 Coarse grid of c values (32×18). FPGA renders at this resolution. Each cell shows escape count as a number, then as a colour. The bridging scene from "iterate" to "image".
 
-### Scene 5 — Full Mandelbrot, free exploration
+### Scene 5: Full Mandelbrot, free exploration
 Full 720p FPGA render. Overlay shows centre, zoom, max_iter, FPS. Inputs: pan/zoom/iter knobs/palette.
 
-### Scene 6 — Mandelbrot ↔ Julia split-screen
+### Scene 6: Mandelbrot ↔ Julia split-screen
 Left half: Mandelbrot with cursor at current c. Right half: Julia for that c. **Strongest single educational moment.** Inputs: joystick moves the cursor (and thus Julia c), NEXT.
 
-### Scene 7 — Precision limits
+### Scene 7: Precision limits
 Continue zooming. Show actual quantisation. Trip the overflow flag, display "precision limit reached". Honest engineering trade-off.
 
 ### Library mode (post-walkthrough)
@@ -445,85 +188,22 @@ Split-screen FPGA vs CPU on the same view. Live FPS counters for both. Live iter
 
 ---
 
-## 9. Adaptive max_iter
+## 9. Simulation and verification
 
-### 9.1 Mechanism
-PS sets desired max_iter (say 1024). FPGA tracks `frame_cycles`. If approaching a budget (e.g. 90% of 1/60 s at 100 MHz = ~1.5 M cycles), FPGA clamps new iterations: pixels in flight finish; remaining unprocessed pixels output their current count.
-
-### 9.2 PS feedback
-After each frame PS reads ACTUAL_MAX_ITER. If consistently below desired, lower the request slightly; if well above, raise it. Hysteresis prevents oscillation.
-
-### 9.3 UI visibility
-Overlay shows both desired and actual: "iter: 1024 (actual 380)". Honest and pedagogically useful.
+...
 
 ---
 
-## 10. CPU baseline (rubric-required, full 7 levels)
-
-All on the PYNQ ARM Cortex-A9.
-
-| Level | Implementation | Expected order |
-|---|---|---|
-| 1 | Pure Python, double | ~0.05 Mpix/s |
-| 2 | NumPy vectorised, double | ~0.5 Mpix/s |
-| 3 | Cython with types, double | ~5 Mpix/s |
-| 4 | C `-O3 -ffast-math`, double | ~8 Mpix/s |
-| 5 | C single precision float | ~12 Mpix/s |
-| 6 | C + NEON SIMD intrinsics | ~25 Mpix/s |
-| 7 | C + NEON + 2 cores (pthreads) | ~45 Mpix/s |
-
-FPGA target: ~50 Mpix/s typical, higher on outside-heavy views. Vs Level 3 (the Cython baseline the brief references): ~10× speedup. Vs Level 7 (strongest CPU): comfortable margin even on inside-heavy views.
-
-### 10.1 Methodology
-Same view, same resolution (720p), same iteration logic. End-to-end timing. 100 frames, drop first 10, report mean ± std. Report both FPS and total iterations/second (zoom-independent, more honest).
-
-### 10.2 Cross-use
-The C implementation **is also the simulation golden model.** Same code used in the Verilator testbench (§11) to compare iteration counts vs hardware. Pays for the work twice.
-
-### 10.3 Schedule
-Levels 1–2 by end of Week 1. Level 3–4 by end of Week 2. Level 5–6 by end of Week 3. Level 7 + data collection in Week 4.
-
----
-
-## 11. Simulation and verification
-
-### 11.1 Stack
-Verilator + C++ testbench. Compiles SystemVerilog to C++, runs ~10× faster than Icarus, integrates with the C reference for direct comparison.
-
-### 11.2 Test ladder
-1. Single pixel through single core. Compare iter count to C reference at various c values: 0, 1, -1, -0.75+0.1i, deep inside (-0.5+0i), near boundary, outside.
-2. Full frame through single core. Tolerance: ≤1 iter difference on ≥99% of pixels.
-3. Full frame through N cores. Same comparison + verify raster order at the stream output.
-4. AXI-Lite R/W via extended `test_AXIL.v`.
-5. Backpressure: stream consumer drops `ready` randomly. No pixels lost, no false `valid`, frame ends correctly.
-6. SOF latching: change parameters mid-frame, verify they take effect at exactly SOF.
-7. Overflow detection: feed overflowing parameters, verify flag sets.
-
-### 11.3 Integration tests on hardware
-1. Solid colour pattern.
-2. Gradient (H, V, diagonal).
-3. Checkerboard.
-4. Coordinate display.
-5. Simple Mandelbrot at 256×256, 5 iter max.
-6. Full 720p Mandelbrot.
-7. Mandelbrot + parameter changes.
-8. All algorithms in turn.
-9. Stress: continuous parameter changes from controller for 1 hour, no hangs.
-10. Cold boot to demo-ready in <60 s, three times in a row.
-
----
-
-## 12. HDMI and resolution
+## 10. HDMI and resolution
 
 - Default: 1280×720 @ 60 Hz.
-- Fallback: 800×600 @ 60 Hz, 640×480 @ 60 Hz.
-- Boot-time fallback: hold MODE button on boot to cycle resolutions. Saves you on demo day if the demo monitor's EDID is hostile.
+- Boot-time fallback: hold MODE button on boot to cycle resolutions
 
 PYNQ-Z1 HDMI documented to work reliably up to 720p; 1080p marginal. We target 720p and don't promise more.
 
 ---
 
-## 13. Team allocation (two-team structure)
+## 11. Team allocation (two-team structure)
 
 The project runs as two parallel teams. After Week 2 the EEE team pivots from controller work onto software and testing while the EIE team continues FPGA work end-to-end. Daily 10-minute standup in the lab keeps both teams aware of where interfaces are moving.
 
@@ -554,7 +234,7 @@ Phase 2: continue FPGA work, finish algorithm variants, run the CPU baseline (al
 
 ---
 
-## 14. Weekly schedule
+## 13. Weekly schedule
 
 Working days available between today and the report deadline: roughly 20, after subtracting the two professional engineering half-days, the bank holiday, and accounting for weekends.
 
@@ -620,7 +300,7 @@ Weekend: final touches. Pack the demo kit (power supply, HDMI cable, monitor if 
 
 ---
 
-## 15. Risk register
+## 14. Risk register
 
 | Risk | Probability | Impact | Mitigation |
 |---|---|---|---|
@@ -640,7 +320,7 @@ Weekend: final touches. Pack the demo kit (power supply, HDMI cable, monitor if 
 
 ---
 
-## 16. Demo plan (Thu 18 June, ~10 min)
+## 15. Demo plan (Thu 18 June, ~10 min)
 
 Order is chosen so each segment stands alone. If one fails, the next still works.
 
@@ -656,7 +336,7 @@ Question and answer: each member is ready to talk to their subsystem. The marker
 
 ---
 
-## 17. Proposed extensions
+## 16. Proposed extensions
 
 If the team is ahead of schedule by end of Week 3, here are extensions ordered roughly by value to effort ratio. Tier 1 are realistic add-ons even with only a few spare days. Tier 2 needs about a week of focused effort. Tier 3 is genuinely ambitious and only worth starting if everything else is locked down.
 
