@@ -1,9 +1,5 @@
-
-// Given vivado handles arrays poorly, we unpack the array in this module and pass values to iter_core
-
 `timescale 1ns / 1ps
 
-// Required line here
 (* keep_hierarchy = "yes" *)
 module iter_core_array #(
     parameter int NUM_CORES = 16,
@@ -43,7 +39,10 @@ module iter_core_array #(
     output wire               out_overflow
 );
 
-    // parameter offset calculations for simpler logic -> look to implement a struct data type here
+    // =========================================================
+    // BULLETPROOF PARAMETERIZED BIT-PACKING
+    // =========================================================
+    // By calculating the exact bit offsets, we avoid structs entirely.
     localparam int OVF_BIT  = 0;
     localparam int ESC_BIT  = 1;
     localparam int ZI_BIT   = 2;
@@ -70,7 +69,7 @@ module iter_core_array #(
     generate
         for (genvar i = 0; i < NUM_CORES; i++) begin : core_gen
             
-            // Local wires specific to a singular core
+            // Local wires exclusively for THIS specific core
             wire [SEQ_W-1:0]  c_seq;
             wire [ITER_W-1:0] c_iter;
             wire [W-1:0]      c_z_r;
@@ -118,6 +117,7 @@ module iter_core_array #(
                 .out_overflow( c_ovf )
             );
             
+            // EXPLICIT COMBINATIONAL PACKING (Vivado can't mess this up)
             assign skid_in_wire[OVF_BIT]            = c_ovf;
             assign skid_in_wire[ESC_BIT]            = c_esc;
             assign skid_in_wire[ZI_BIT   +: W]      = c_z_i;
@@ -125,23 +125,21 @@ module iter_core_array #(
             assign skid_in_wire[ITER_BIT +: ITER_W] = c_iter;
             assign skid_in_wire[SEQ_BIT  +: SEQ_W]  = c_seq;
             
-            // Skid Buffer
-
+            // The Skid Buffer
             skid_buffer_m#(
                 .INPUT_DATA( TOTAL_W ) 
             ) skid_inst (
                 .clk(clk),
-                .rst(rst_n), 
+                .rst(~rst_n), 
                 .in_valid (raw_out_valid[i]),
-                .in_ready (raw_out_ready[i]),
+                .out_ready (raw_out_ready[i]),
                 .in_data  (skid_in_wire),      
                 .out_valid(core_out_valid[i]),
-                .out_ready(core_out_ready[i]),
+                .in_ready(core_out_ready[i]),
                 .out_data (skid_out_wire)      
             );
             
-            //  Unpacking to flat arrays
-
+            // EXPLICIT COMBINATIONAL UNPACKING TO FLAT ARRAYS
             assign core_out_seq[(i*SEQ_W)  +: SEQ_W]   = skid_out_wire[SEQ_BIT  +: SEQ_W];
             assign core_out_iter[(i*ITER_W) +: ITER_W] = skid_out_wire[ITER_BIT +: ITER_W];
             assign core_out_z_r[(i*W)      +: W]       = skid_out_wire[ZR_BIT   +: W];
@@ -151,8 +149,9 @@ module iter_core_array #(
         end
     endgenerate
     
+    // =========================================================
     // RESULT ARBITER
-    
+    // =========================================================
     result_arbiter#(
         .NUM_CORES(NUM_CORES),
         .W(W),
@@ -160,7 +159,7 @@ module iter_core_array #(
         .SEQ_W(SEQ_W)
     ) arbiter(
         .clk(clk),
-        .rst(rst_n), 
+        .rst(~rst_n), 
         
         .core_out_valid(core_out_valid),
         .core_out_ready(core_out_ready),

@@ -102,8 +102,8 @@ module iter_core #(
 
     // Rounded-back-to-Q4.22 squares + sticky overflow flag
     slot_t s4_payload_r;
-    logic signed [W-1:0] s4_zr2_r;
-    logic signed [W-1:0] s4_zi2_r;
+    logic signed [W:0]   s4_zr2_minus_zi2_r;
+    logic signed [W:0]   s4_mag_sq_r;
     logic signed [W:0]   s4_two_zrzi_r;
     logic                s4_ovf_r;
 
@@ -147,7 +147,6 @@ module iter_core #(
     // Stage 4 combinational : round Q8.44 product to Q4.22, ovf flags
     localparam logic signed [PROD_W-1:0] ROUND_BIAS = (1 <<< (FRAC - 1));
 
-    logic signed [PROD_W-1:0] s3_zr2_round_c, s3_zi2_round_c, s3_zrzi_round_c;
     logic signed [W-1:0]      zr2_q422_c, zi2_q422_c, zrzi_q422_c;
     logic signed [W:0]        two_zrzi_q523_c;
     logic                     zr2_ovf_c, zi2_ovf_c, zrzi_ovf_c;
@@ -155,57 +154,53 @@ module iter_core #(
     logic zr2_upper_all_ones,  zr2_upper_all_zeros;
     logic zi2_upper_all_ones,  zi2_upper_all_zeros;
     logic zrzi_upper_all_ones, zrzi_upper_all_zeros;
+    
+    logic signed [W:0] s4_zr2_minus_zi2_c;
+    logic signed [W:0] s4_mag_sq_c;
 
     always_comb begin
-        // Round-to-nearest by adding 2^(FRAC-1) before truncation
-        s3_zr2_round_c  = s3_zr2_p_r  + ROUND_BIAS;
-        s3_zi2_round_c  = s3_zi2_p_r  + ROUND_BIAS;
-        s3_zrzi_round_c = s3_zrzi_p_r + ROUND_BIAS;
 
-        // Slice back to Q4.22
-        zr2_q422_c  = s3_zr2_round_c [W+FRAC-1 : FRAC];
-        zi2_q422_c  = s3_zi2_round_c [W+FRAC-1 : FRAC];
-        zrzi_q422_c = s3_zrzi_round_c[W+FRAC-1 : FRAC];
-
+        // Slice back to Q4.22 (Rounding was handled by DSP!)
+        zr2_q422_c  = s3_zr2_p_r [W+FRAC-1 : FRAC];
+        zi2_q422_c  = s3_zi2_p_r [W+FRAC-1 : FRAC];
+        zrzi_q422_c = s3_zrzi_p_r[W+FRAC-1 : FRAC];
+        
         // 2*zr*zi as Q5.22 (one extra bit because of the <<1)
         two_zrzi_q523_c = $signed({zrzi_q422_c[W-1], zrzi_q422_c}) <<< 1;
 
         // Overflow if discarded upper bits are mixed (not all 0 and not all 1)
-        zr2_upper_all_ones  =  &s3_zr2_round_c [PROD_W-1 : W+FRAC-1];
-        zr2_upper_all_zeros = ~|s3_zr2_round_c [PROD_W-1 : W+FRAC-1];
+        zr2_upper_all_ones  =  &s3_zr2_p_r [PROD_W-1 : W+FRAC-1];
+        zr2_upper_all_zeros = ~|s3_zr2_p_r [PROD_W-1 : W+FRAC-1];
         zr2_ovf_c           = ~(zr2_upper_all_ones | zr2_upper_all_zeros);
 
-        zi2_upper_all_ones  =  &s3_zi2_round_c [PROD_W-1 : W+FRAC-1];
-        zi2_upper_all_zeros = ~|s3_zi2_round_c [PROD_W-1 : W+FRAC-1];
+        zi2_upper_all_ones  =  &s3_zi2_p_r [PROD_W-1 : W+FRAC-1];
+        zi2_upper_all_zeros = ~|s3_zi2_p_r [PROD_W-1 : W+FRAC-1];
         zi2_ovf_c           = ~(zi2_upper_all_ones | zi2_upper_all_zeros);
 
-        zrzi_upper_all_ones  =  &s3_zrzi_round_c[PROD_W-1 : W+FRAC-1];
-        zrzi_upper_all_zeros = ~|s3_zrzi_round_c[PROD_W-1 : W+FRAC-1];
+        zrzi_upper_all_ones  =  &s3_zrzi_p_r[PROD_W-1 : W+FRAC-1];
+        zrzi_upper_all_zeros = ~|s3_zrzi_p_r[PROD_W-1 : W+FRAC-1];
         zrzi_ovf_c           = ~(zrzi_upper_all_ones | zrzi_upper_all_zeros);
+        
+        // TIMING OPTIMIZATION: Do only ONE addition/subtraction here
+        s4_zr2_minus_zi2_c = $signed({zr2_q422_c[W-1], zr2_q422_c}) - $signed({zi2_q422_c[W-1], zi2_q422_c});
+        s4_mag_sq_c        = $signed({zr2_q422_c[W-1], zr2_q422_c}) + $signed({zi2_q422_c[W-1], zi2_q422_c});
     end
 
     // Stage 5 combinational : partial sums + combine-overflow detect
-    logic signed [W:0] s4_zr2_minus_zi2_c;
-    logic signed [W:0] s4_z_r_new_full_c, s4_z_i_new_full_c, s4_mag_sq_c;
-    logic              s4_combine_ovf_c;
+    logic signed [W:0] s5_z_r_new_full_c, s5_z_i_new_full_c;
+    logic              s5_combine_ovf_c;
 
     always_comb begin
         // 27-bit signed to safely absorb sign/integer growth
-        s4_zr2_minus_zi2_c = $signed({s4_zr2_r[W-1], s4_zr2_r})
-                           - $signed({s4_zi2_r[W-1], s4_zi2_r});
-
-        s4_z_r_new_full_c  = s4_zr2_minus_zi2_c
+        s5_z_r_new_full_c  = s4_zr2_minus_zi2_r
                            + $signed({s4_payload_r.c_r[W-1], s4_payload_r.c_r});
 
-        s4_z_i_new_full_c  = s4_two_zrzi_r
+        s5_z_i_new_full_c  = s4_two_zrzi_r
                            + $signed({s4_payload_r.c_i[W-1], s4_payload_r.c_i});
 
-        s4_mag_sq_c        = $signed({s4_zr2_r[W-1], s4_zr2_r})
-                           + $signed({s4_zi2_r[W-1], s4_zi2_r});
-
         // Truncation back to W bits overflows if top sign-extended bit differs from W-1
-        s4_combine_ovf_c   = (s4_z_r_new_full_c[W] ^ s4_z_r_new_full_c[W-1])
-                           | (s4_z_i_new_full_c[W] ^ s4_z_i_new_full_c[W-1]);
+        s5_combine_ovf_c   = (s5_z_r_new_full_c[W] ^ s5_z_r_new_full_c[W-1])
+                           | (s5_z_i_new_full_c[W] ^ s5_z_i_new_full_c[W-1]);
     end
 
     // Stage 6 combinational : escape compare, truncate, reached_max test
@@ -298,8 +293,8 @@ module iter_core #(
             s3_zi2_p_r        <= '0;
             s3_zrzi_p_r       <= '0;
             s4_payload_r      <= '0;
-            s4_zr2_r          <= '0;
-            s4_zi2_r          <= '0;
+            s4_zr2_minus_zi2_r <= '0;
+            s4_mag_sq_r        <= '0;
             s4_two_zrzi_r     <= '0;
             s4_ovf_r          <= '0;
             s5_payload_r      <= '0;
@@ -329,24 +324,24 @@ module iter_core #(
 
             // s2 -> s3 : DSP P register; pure register-to-register move
             s3_payload_r <= s2_payload_r;
-            s3_zr2_p_r   <= s2_zr2_m_r;
-            s3_zi2_p_r   <= s2_zi2_m_r;
-            s3_zrzi_p_r  <= s2_zrzi_m_r;
+            s3_zr2_p_r   <= s2_zr2_m_r + ROUND_BIAS;
+            s3_zi2_p_r   <= s2_zi2_m_r + ROUND_BIAS;
+            s3_zrzi_p_r  <= s2_zrzi_m_r + ROUND_BIAS;
 
             // s3 -> s4 : round to Q4.22, latch sticky overflow
             s4_payload_r  <= s3_payload_r;
-            s4_zr2_r      <= zr2_q422_c;
-            s4_zi2_r      <= zi2_q422_c;
+            s4_zr2_minus_zi2_r <= s4_zr2_minus_zi2_c;
+            s4_mag_sq_r        <= s4_mag_sq_c;
             s4_two_zrzi_r <= two_zrzi_q523_c;
             s4_ovf_r      <= s3_payload_r.overflow | zr2_ovf_c | zi2_ovf_c | zrzi_ovf_c;
 
             // s4 -> s5 : partial sums and combine-overflow flag
             s5_payload_r      <= s4_payload_r;
-            s5_z_r_new_full_r <= s4_z_r_new_full_c;
-            s5_z_i_new_full_r <= s4_z_i_new_full_c;
-            s5_mag_sq_r       <= s4_mag_sq_c;
+            s5_z_r_new_full_r <= s5_z_r_new_full_c;
+            s5_z_i_new_full_r <= s5_z_i_new_full_c;
+            s5_mag_sq_r       <= s4_mag_sq_r;
             s5_ovf_r          <= s4_ovf_r;
-            s5_combine_ovf_r  <= s4_combine_ovf_c;
+            s5_combine_ovf_r  <= s5_combine_ovf_c;
 
             // s5 -> s6 : escape compare, escape mux on z, iter increment
             s6_r.valid    <= s5_payload_r.valid;
@@ -377,3 +372,7 @@ module iter_core #(
     end
 
 endmodule
+
+
+
+

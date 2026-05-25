@@ -19,7 +19,7 @@
 // 
 //////////////////////////////////////////////////////////////////////////////////
 
-// required
+
 (* keep_hierarchy = "yes" *)
 module result_arbiter #(
     parameter int NUM_CORES = 16,
@@ -66,7 +66,9 @@ module result_arbiter #(
     logic [CORE_IDX_W-1:0] selected_idx;
     logic                  selected_valid;
 
-    // Unpacking flat 1D arrays into 2D arrays using constant indexing - solves Vivado errors
+    // -------------------------------------------------------------------------
+    // VIVADO BUG FIX: Unpack flat 1D arrays into 2D arrays using constant indexing
+    // -------------------------------------------------------------------------
     logic [SEQ_W-1:0]    seq_2d  [NUM_CORES];
     logic [ITER_W-1:0]   iter_2d [NUM_CORES];
     logic signed [W-1:0] z_r_2d  [NUM_CORES];
@@ -81,26 +83,45 @@ module result_arbiter #(
         end
     end
 
-    // Round-robin grant selection
+    // -------------------------------------------------------------------------
+    // Round-robin grant selection (Optimized for Timing)
+    // -------------------------------------------------------------------------
+    logic [NUM_CORES-1:0] masked_req;
+    
     always_comb begin
-        int candidate;
+        // Mask out cores that have lower priority than the current rr_ptr
+        for (int i = 0; i < NUM_CORES; i++) begin
+            masked_req[i] = core_out_valid[i] & (i >= rr_ptr);
+        end
+        
         grant_valid = 1'b0;
         grant_idx   = '0;
 
-        for (int offset = 0; offset < NUM_CORES; offset++) begin
-            candidate = rr_ptr + offset;
-
-            if (candidate >= NUM_CORES) begin
-                candidate = candidate - NUM_CORES;
+        // 1st Priority Tree: Look at masked requests (equal or higher than pointer)
+        if (|masked_req) begin
+            grant_valid = 1'b1;
+            for (int i = 0; i < NUM_CORES; i++) begin
+                if (masked_req[i]) begin
+                    grant_idx = i[CORE_IDX_W-1:0];
+                    break;
+                end
             end
-
-            if (!grant_valid && core_out_valid[candidate]) begin
-                grant_valid = 1'b1;
-                grant_idx   = candidate[CORE_IDX_W-1:0];
+        end 
+        // 2nd Priority Tree: Wrap around and look at unmasked requests
+        else if (|core_out_valid) begin
+            grant_valid = 1'b1;
+            for (int i = 0; i < NUM_CORES; i++) begin
+                if (core_out_valid[i]) begin
+                    grant_idx = i[CORE_IDX_W-1:0];
+                    break;
+                end
             end
         end
     end
 
+    // -------------------------------------------------------------------------
+    // Hold/Grant Selection
+    // -------------------------------------------------------------------------
     always_comb begin
         if (hold_valid) begin
             selected_valid = 1'b1;
@@ -112,7 +133,9 @@ module result_arbiter #(
         end
     end
 
-    // DATA MUX: Safely index the 2D arrays (No variable part-selects)
+    // -------------------------------------------------------------------------
+    // DATA MUX: Safely index the 2D arrays (No variable part-selects!)
+    // -------------------------------------------------------------------------
     always_comb begin
         rob_in_valid      = selected_valid;
 
@@ -133,8 +156,9 @@ module result_arbiter #(
         end
     end
 
+    // -------------------------------------------------------------------------
     // READY DEMUX: Explicit assignment to prevent synthesizer loops
-
+    // -------------------------------------------------------------------------
     always_comb begin
         for (int i = 0; i < NUM_CORES; i++) begin
             if (selected_valid && (selected_idx == i)) begin
@@ -145,6 +169,9 @@ module result_arbiter #(
         end
     end
 
+    // -------------------------------------------------------------------------
+    // Sequential state
+    // -------------------------------------------------------------------------
     always_ff @(posedge clk) begin
         if (rst) begin
             rr_ptr     <= '0;
