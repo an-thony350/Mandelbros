@@ -24,7 +24,7 @@ module perf_counters#(
 )(
 
     input logic              clk,
-    input logic              rst,
+    input logic              rst_n,
     // inputs from reorder buffer output
 
     input logic              stream_valid,
@@ -51,7 +51,7 @@ logic [31:0] tmp_pixels_hit_max;
 
 
 always_ff @(posedge clk) begin
-    if(rst) begin
+    if(!rst_n) begin
         tmp_frame_cycles <= 0;
         tmp_total_iters <= 0;
         tmp_pixels_escaped <= 0;
@@ -68,10 +68,17 @@ always_ff @(posedge clk) begin
             snap_pixels_escaped <= tmp_pixels_escaped;
             snap_pixels_hit_max <= tmp_pixels_hit_max;
 
-            tmp_frame_cycles <= 0;
-            tmp_total_iters <= 0;
-            tmp_pixels_escaped <= 0;
-            tmp_pixels_hit_max <= 0;
+            tmp_frame_cycles <= 1'b1;
+                
+            if (stream_valid && stream_ready) begin
+                tmp_total_iters    <= pixel_iter;
+                tmp_pixels_escaped <= pixel_escaped ? 1'b1 : '0;
+                tmp_pixels_hit_max <= pixel_hit_max ? 1'b1 : '0;
+            end else begin
+                tmp_total_iters    <= 0;
+                tmp_pixels_escaped <= 0;
+                tmp_pixels_hit_max <= 0;
+            end
         end
         else begin
             tmp_frame_cycles <= tmp_frame_cycles + 1'b1;
@@ -92,3 +99,4 @@ always_ff @(posedge clk) begin
 end
 
 endmodule
+
