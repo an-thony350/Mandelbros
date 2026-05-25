@@ -59,7 +59,7 @@ module pixel_scheduler #(
     logic [SEQ_W-1:0]    seq;
 
     assign available_core = |in_ready;
-    assign dispatch       = available_core && !frame_done;
+    assign dispatch       = !rst && available_core && !frame_done;
 
     assign last_pixel = dispatch && (x == X_RES-1) && (y == Y_RES-1);
 

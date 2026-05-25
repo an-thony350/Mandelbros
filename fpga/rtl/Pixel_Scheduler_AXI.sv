@@ -461,32 +461,8 @@
     
     // starting frame logic
     
-    wire software_start;
-    assign software_start = slv_reg7[0];
-    
-    // forming arrays for pixel_scheduler
-    
-    wire signed [W-1:0]      c_r_array      [0:NUM_CORES-1];
-    wire signed [W-1:0]      c_i_array      [0:NUM_CORES-1];
-    wire signed [W-1:0]      z0_r_array     [0:NUM_CORES-1];
-    wire signed [W-1:0]      z0_i_array     [0:NUM_CORES-1];
-    wire [ITER_W-1:0]        max_iter_array [0:NUM_CORES-1];
-    wire [MODE_W-1:0]        mode_array     [0:NUM_CORES-1];
-    wire [SEQ_W-1:0]         seq_array      [0:NUM_CORES-1];
-    
-    
-    genvar i;
-    generate
-        for (i = 0; i < NUM_CORES; i = i + 1) begin : flatten_outputs
-            assign c_r[(i*W) +: W]               = c_r_array[i];
-            assign c_i[(i*W) +: W]               = c_i_array[i];
-            assign z0_r[(i*W) +: W]              = z0_r_array[i];
-            assign z0_i[(i*W) +: W]              = z0_i_array[i];
-            assign out_max_iter[(i*ITER_W) +: ITER_W] = max_iter_array[i];
-            assign out_mode[(i*MODE_W) +: MODE_W]     = mode_array[i];
-            assign out_seq[(i*SEQ_W) +: SEQ_W]        = seq_array[i];
-        end
-    endgenerate
+    wire software_run;
+    assign software_run = slv_reg7[0];
     
     // pixel sched
     pixel_scheduler#(
@@ -499,7 +475,7 @@
         .Y_RES(Y_RES)
     ) pixel_scheduler_final (
         .clk(S_AXI_ACLK),
-        .rst(S_AXI_ARESETN == 1'b0 || software_start), // reset will occur on either system side or software start
+        .rst(S_AXI_ARESETN == 1'b0 || !software_run), // reset will occur on either system side or software not running
         
         // Inputs from slave registers
         
