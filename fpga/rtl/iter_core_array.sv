@@ -39,9 +39,6 @@ module iter_core_array #(
     output wire               out_overflow
 );
 
-    // =========================================================
-    // BULLETPROOF PARAMETERIZED BIT-PACKING
-    // =========================================================
     // By calculating the exact bit offsets, we avoid structs entirely.
     localparam int OVF_BIT  = 0;
     localparam int ESC_BIT  = 1;
@@ -117,7 +114,7 @@ module iter_core_array #(
                 .out_overflow( c_ovf )
             );
             
-            // EXPLICIT COMBINATIONAL PACKING (Vivado can't mess this up)
+            // EXPLICIT COMBINATIONAL PACKING
             assign skid_in_wire[OVF_BIT]            = c_ovf;
             assign skid_in_wire[ESC_BIT]            = c_esc;
             assign skid_in_wire[ZI_BIT   +: W]      = c_z_i;
@@ -132,10 +129,11 @@ module iter_core_array #(
                 .clk(clk),
                 .rst(~rst_n), 
                 .in_valid (raw_out_valid[i]),
-                .out_ready (raw_out_ready[i]),
-                .in_data  (skid_in_wire),      
+                .in_ready(raw_out_ready[i]), // ...
+                .in_data  (skid_in_wire),
+                
+                .out_ready (core_out_ready[i]), // ...   
                 .out_valid(core_out_valid[i]),
-                .in_ready(core_out_ready[i]),
                 .out_data (skid_out_wire)      
             );
             
@@ -149,9 +147,7 @@ module iter_core_array #(
         end
     endgenerate
     
-    // =========================================================
     // RESULT ARBITER
-    // =========================================================
     result_arbiter#(
         .NUM_CORES(NUM_CORES),
         .W(W),
