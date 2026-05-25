@@ -10,7 +10,7 @@ module pixel_scheduler #(
     parameter int Y_RES     = 720
 )(
     input logic clk,
-    input logic rst,
+    input logic rst_n,
 
     input logic signed [W-1:0] x_jump,
     input logic signed [W-1:0] y_jump,
@@ -59,7 +59,7 @@ module pixel_scheduler #(
     logic [SEQ_W-1:0]    seq;
 
     assign available_core = |in_ready;
-    assign dispatch       = !rst && available_core && !frame_done;
+    assign dispatch       = rst_n && available_core && !frame_done;
 
     assign last_pixel = dispatch && (x == X_RES-1) && (y == Y_RES-1);
 
@@ -104,7 +104,7 @@ module pixel_scheduler #(
     endgenerate
 
     always_ff @(posedge clk) begin
-        if (rst) begin
+        if (!rst_n) begin
             x          <= '0;
             y          <= '0;
             cur_c_r    <= x_min;

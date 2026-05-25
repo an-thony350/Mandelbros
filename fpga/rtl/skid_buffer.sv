@@ -26,7 +26,7 @@ module skid_buffer_m #(
     parameter int INPUT_DATA = 90
 )(
     input  logic                  clk,
-    input  logic                  rst,
+    input  logic                  rst_n,
 
     // Upstream (To/From iter_core)
     input  logic                  in_valid,
@@ -57,7 +57,7 @@ module skid_buffer_m #(
     assign out_data  = fifo[rd_ptr];
 
     always_ff @(posedge clk) begin
-        if (rst) begin
+        if (!rst_n) begin
             wr_ptr <= 1'b0;
             rd_ptr <= 1'b0;
             count  <= 2'd0;

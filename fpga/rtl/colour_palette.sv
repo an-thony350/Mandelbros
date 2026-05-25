@@ -7,7 +7,7 @@ module colour_palette #(
     parameter int PALETTE_BITS = 10
 )(
     input logic clk,
-    input logic rst,
+    input logic rst_n,
 
     // Input from reorder buffer
     input  logic                in_valid,
@@ -104,7 +104,7 @@ module colour_palette #(
     end
 
     always_ff @(posedge clk) begin
-        if (rst) begin
+        if (!rst_n) begin
             out_valid   <= 1'b0;
             out_seq_num <= '0;
             out_r       <= '0;

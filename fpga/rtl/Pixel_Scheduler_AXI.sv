@@ -475,7 +475,7 @@
         .Y_RES(Y_RES)
     ) pixel_scheduler_final (
         .clk(S_AXI_ACLK),
-        .rst(S_AXI_ARESETN == 1'b0 || !software_run), // reset will occur on either system side or software not running
+        .rst_n(S_AXI_ARESETN == 1'b1 && software_run), // reset will occur on either system side or software not running
         
         // Inputs from slave registers
         

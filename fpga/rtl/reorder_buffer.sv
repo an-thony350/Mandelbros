@@ -102,7 +102,7 @@ assign out_overflow   = buf_overflow[re_index];
 
 assign out_sof        = (out_valid && out_seq_num == 16'd0);
 assign out_eol        = (out_seq_num % SCREEN_W == SCREEN_W-1);
-assign out_hit_max    = (out_iter_count == MAX_ITER);
+assign out_hit_max    = out_valid && !out_escaped;
 
   
 always_comb begin

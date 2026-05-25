@@ -28,7 +28,7 @@ module result_arbiter #(
     parameter int SEQ_W     = 20
 )(
     input logic clk,
-    input logic rst,
+    input logic rst_n,
 
     // Inputs from all iter_cores
     input  logic [NUM_CORES-1:0]                core_out_valid,
@@ -173,7 +173,7 @@ module result_arbiter #(
     // Sequential state
     // -------------------------------------------------------------------------
     always_ff @(posedge clk) begin
-        if (rst) begin
+        if (!rst_n) begin
             rr_ptr     <= '0;
             hold_idx   <= '0;
             hold_valid <= 1'b0;

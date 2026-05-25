@@ -127,7 +127,7 @@ module iter_core_array #(
                 .INPUT_DATA( TOTAL_W ) 
             ) skid_inst (
                 .clk(clk),
-                .rst(~rst_n), 
+                .rst_n(rst_n), 
                 .in_valid (raw_out_valid[i]),
                 .in_ready(raw_out_ready[i]), // ...
                 .in_data  (skid_in_wire),
@@ -155,7 +155,7 @@ module iter_core_array #(
         .SEQ_W(SEQ_W)
     ) arbiter(
         .clk(clk),
-        .rst(~rst_n), 
+        .rst_n(rst_n), 
         
         .core_out_valid(core_out_valid),
         .core_out_ready(core_out_ready),
