@@ -1,6 +1,4 @@
-#include <iostream>
-#include <cmath>
-
+#include "definitions.hpp"
                    
 int Mandelbrot_calculation(double c_re, double c_im, int size){
     
@@ -81,4 +79,25 @@ int Tricorn_calculation(double c_re, double c_im, int size){
         i++;
     }
     return i;
+}
+
+void Chosen_Function(int choice, int val_1, int val_2, int val_3, int val_4){
+    switch(choice){
+
+    case Mandelbrot: 
+        Mandelbrot_calculation(val_1, val_2, ITER_NUM);
+        break;
+    case Julia:
+        Julia_calculation(val_1, val_2, val_3, val_4, ITER_NUM);
+        break;
+    case Burning_Ship:
+        Burning_Ship_calculation(val_1, val_2, ITER_NUM);
+        break;
+    case Tricorn:
+        Tricorn_calculation(val_1, val_2, ITER_NUM);
+        break;
+    default:
+         std::cout<<"Error incorrect input \n";
+         return;
+    }
 }
