@@ -96,6 +96,7 @@ void determine_range( currently left as this but will be changed later ){
     col_end = -1*(COL_NUM/4);
 }
 */
+
 void choose_set(){
     std::cout << "Choose which set to represent: \n";
     std::cout << "Mandelbrot: 0\n";
@@ -116,11 +117,11 @@ void choose_set(){
 void Chosen_Function(int c_re, int c_im, int z_re, int z_im){
     switch(chosen_set){
 
-    case Mandelbrot: 
+    case Mandelbrot:
         Mandelbrot_calculation(c_re, c_im, ITER_NUM);
         break;
     case Julia:
-        Julia_calculation(z_re, z_im, c_re, c_im, ITER_NUM);
+        Julia_calculation(z_re, z_im, c_re, c_im, ITER_NUM); //swapped here for ease
         break;
     case Burning_Ship:
         Burning_Ship_calculation(c_re, c_im, ITER_NUM);

@@ -4,6 +4,7 @@
 #include <vector>
 #include <chrono>
 #include <cmath>
+#include <thread>
 
 // relevant defenitions
 
@@ -11,6 +12,7 @@
 #define COL_NUM 720
 #define TOTAL_LOOPS 5
 #define ITER_NUM 256
+#define NUM_THREADS 16
 
 // Enumerator for set choice
 
