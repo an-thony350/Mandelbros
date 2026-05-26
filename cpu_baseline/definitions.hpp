@@ -10,7 +10,7 @@
 
 #define ROW_NUM 1280
 #define COL_NUM 720
-#define TOTAL_LOOPS 5
+#define TOTAL_LOOPS 1
 #define ITER_NUM 256
 #define NUM_THREADS 16
 

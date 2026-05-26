@@ -16,19 +16,17 @@ void Call_Calc(int start_row, int end_row){
 
     for(start_row; start_row < end_row; start_row++){
 
-        if(start_row > ROW_NUM/2) tmp_row_loop = -1*start_row;
-        else if(start_row == ROW_NUM/2) tmp_row_loop = 0;
+        if(start_row >= ROW_NUM/2) tmp_row_loop = -1*start_row;
         else tmp_row_loop = start_row;
 
-        double c_re = tmp_row_loop/ROW_NUM;
+        double c_re = (tmp_row_loop*2)/ROW_NUM;
 
         for(int col_loop = 0; col_loop < COL_NUM; col_loop++){
 
             if(col_loop < COL_NUM/2) tmp_col_loop = -1*col_loop;
-            else if(col_loop == COL_NUM/2) tmp_col_loop = 0;
             else tmp_col_loop = col_loop;
 
-            double c_im = tmp_col_loop/COL_NUM;
+            double c_im = (tmp_col_loop*2)/COL_NUM;
 
             Chosen_Function(c_re, c_im, z_real, z_imaginary);
         }
@@ -59,9 +57,10 @@ double non_threaded_timing(){
 double threaded_timing(){
 
     std::vector<double> timing_doubles;
-    std::vector<std::thread> threads;
     
     for(int loop_count = 0; loop_count < TOTAL_LOOPS; loop_count++){
+        std::vector<std::thread> threads;
+
         std::cout << "Starting loop: " << loop_count + 1 << std::endl;
 
         auto Start_Time  = std::chrono::high_resolution_clock::now();
@@ -86,8 +85,12 @@ double threaded_timing(){
 int main(){
     choose_set();
     std::cout << "Set chosen, now running timing tests: \n";
-    double time = threaded_timing();
+    double time = non_threaded_timing();
 
     std::cout << "Average time for " << "SET" << ": " << time << " seconds.\n";
+
+    std::cout << "Map c_re: " << map[920161].first.first << std::endl;
+    std::cout << "Map c_im: " << map[920161].first.second << std::endl;
+    std::cout << "Map iter num: " << map[920161].second << std::endl;
 
 }

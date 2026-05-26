@@ -2,9 +2,10 @@
 
 int chosen_set;
 double  z_real, z_imaginary;
+std::vector<std::pair<std::pair<double,double>, int>> map;
 
                    
-int Mandelbrot_calculation(double c_re, double c_im, int size){
+std::pair<std::pair<double,double>, int>  Mandelbrot_calculation(double c_re, double c_im, int size){
     
     // Initial z values & iteration value
     double z_re = 0.0;
@@ -22,7 +23,7 @@ int Mandelbrot_calculation(double c_re, double c_im, int size){
 
         i++;
     }
-    return i;
+    return { {c_re, c_im}, i};
 }
 
 int Julia_calculation(double c_re, double c_im, double z_re, double z_im, int size){
@@ -114,11 +115,11 @@ void choose_set(){
     return;
 }
 
-void Chosen_Function(int c_re, int c_im, int z_re, int z_im){
+void Chosen_Function(double c_re, double c_im, double z_re, double z_im){
     switch(chosen_set){
 
     case Mandelbrot:
-        Mandelbrot_calculation(c_re, c_im, ITER_NUM);
+        map.push_back(Mandelbrot_calculation(c_re, c_im, ITER_NUM));
         break;
     case Julia:
         Julia_calculation(z_re, z_im, c_re, c_im, ITER_NUM); //swapped here for ease
