@@ -9,9 +9,16 @@
 
 #define ROW_NUM 1280
 #define COL_NUM 720
-#define TOTAL_LOOPS 50
+#define TOTAL_LOOPS 5
 #define ITER_NUM 256
 
 // Enumerator for set choice
 
-enum {Mandelbrot, Julia, Burning_Ship, Tricorn};
+#define Mandelbrot 0
+#define Julia 1
+#define Burning_Ship 2
+#define Tricorn 3
+
+
+// Set and variables for calculation
+// May not be necessary double row_start, row_end, col_start, col_end;
