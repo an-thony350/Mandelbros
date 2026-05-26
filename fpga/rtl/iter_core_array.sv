@@ -148,6 +148,15 @@ module iter_core_array #(
     endgenerate
     
     // RESULT ARBITER
+    wire               arb_valid;
+    wire               arb_ready;
+    wire [SEQ_W-1:0]   arb_seq;
+    wire [ITER_W-1:0]  arb_iter;
+    wire [W-1:0]       arb_z_r;
+    wire [W-1:0]       arb_z_i;
+    wire               arb_escaped;
+    wire               arb_overflow;
+
     result_arbiter#(
         .NUM_CORES(NUM_CORES),
         .W(W),
@@ -166,14 +175,52 @@ module iter_core_array #(
         .core_out_escaped (core_out_escaped),
         .core_out_overflow(core_out_overflow),
         
-        .rob_in_valid(out_valid),
-        .rob_in_ready(out_ready),
-        .rob_in_iter_count(out_iter),
-        .rob_in_seq_num(out_seq),
-        .rob_in_z_r(out_z_r),
-        .rob_in_z_i(out_z_i),
-        .rob_in_escaped(out_escaped),
-        .rob_in_overflow(out_overflow)
+        // Output to our new isolating skid buffer instead of directly out
+        .rob_in_valid(arb_valid),
+        .rob_in_ready(arb_ready),
+        .rob_in_iter_count(arb_iter),
+        .rob_in_seq_num(arb_seq),
+        .rob_in_z_r(arb_z_r),
+        .rob_in_z_i(arb_z_i),
+        .rob_in_escaped(arb_escaped),
+        .rob_in_overflow(arb_overflow)
     );
 
+    // =========================================================
+    // FINAL PIPELINE ISOLATION (The Timing Fix)
+    // =========================================================
+    wire [TOTAL_W-1:0] final_skid_in;
+    wire [TOTAL_W-1:0] final_skid_out;
+
+    // Pack the arbiter output
+    assign final_skid_in[OVF_BIT]            = arb_overflow;
+    assign final_skid_in[ESC_BIT]            = arb_escaped;
+    assign final_skid_in[ZI_BIT   +: W]      = arb_z_i;
+    assign final_skid_in[ZR_BIT   +: W]      = arb_z_r;
+    assign final_skid_in[ITER_BIT +: ITER_W] = arb_iter;
+    assign final_skid_in[SEQ_BIT  +: SEQ_W]  = arb_seq;
+
+    // The isolating skid buffer
+    skid_buffer_m#(
+        .INPUT_DATA( TOTAL_W ) 
+    ) final_skid (
+        .clk(clk),
+        .rst_n(rst_n), 
+        .in_valid (arb_valid),
+        .in_ready (arb_ready),
+        .in_data  (final_skid_in),
+        
+        // Output to the Reorder Buffer
+        .out_valid (out_valid),
+        .out_ready (out_ready),
+        .out_data  (final_skid_out)      
+    );
+
+    // Unpack directly to the module outputs
+    assign out_seq      = final_skid_out[SEQ_BIT  +: SEQ_W];
+    assign out_iter     = final_skid_out[ITER_BIT +: ITER_W];
+    assign out_z_r      = final_skid_out[ZR_BIT   +: W];
+    assign out_z_i      = final_skid_out[ZI_BIT   +: W];
+    assign out_escaped  = final_skid_out[ESC_BIT];
+    assign out_overflow = final_skid_out[OVF_BIT];
 endmodule
