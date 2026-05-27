@@ -1,7 +1,13 @@
 #include "definitions.hpp"
 #include "functions.cpp"
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
 
+// global variable for thread implemention
 
+int NUM_THREADS;
+
+// Standard test
 
 double non_threaded_timing(){
 
@@ -24,6 +30,8 @@ double non_threaded_timing(){
     return average(timing_doubles);
 }
 
+// Threaded tests - could also use for 1 thread but slower on average
+
 double threaded_timing(){
 
     std::vector<double> timing_doubles;
@@ -38,7 +46,7 @@ double threaded_timing(){
         
             int start_row = thread_count*(ROW_NUM/NUM_THREADS);
             int end_row = (thread_count == NUM_THREADS - 1) ? ROW_NUM : start_row + ROW_NUM/NUM_THREADS; // used for an uneven distribution of row loops - can be removed w/ assumption
-            threads.push_back(std::thread(Call_Calc, start_row, end_row)); // synchronisation needed here to check properly
+            threads.push_back(std::thread(Call_Calc, start_row, end_row)); // synchronisation needed here to check properly - CHECK THIS, MAY NOT BE AN ISSUE
         }
 
         for(int thread_num = 0; thread_num < NUM_THREADS; thread_num++){
@@ -52,19 +60,47 @@ double threaded_timing(){
     return average(timing_doubles);
 }
 
+double sim_choice(){
+
+    std::cout << "\n";
+    std::cout << "Choose the test you want to run: \n";
+    std::cout << "0: Baseline test - No threading\n";
+    std::cout << "1: Threaded test\n";
+
+    int chosen;
+    std::cin >> chosen;
+
+    if(chosen == 0){
+        std::cout << "Baseline test chosen...\n";
+        std::cout << "\n";
+        return non_threaded_timing();
+    }
+    else if(chosen == 1){
+        std::cout << "Threaded test chosen...\n";
+        std::cout << "\n";
+        std::cout << "Choose the number of threads: \n";
+        int thread_num;
+        std::cin >> thread_num;
+        std::cout << thread_num << " threads chosen...\n";
+        std::cout << "\n";
+        NUM_THREADS = thread_num;
+        return threaded_timing();
+    }
+    else{
+        std::cout << "Error, invalid option chosen, please choose a valid input." << std::endl;
+        std::cout << "\n";
+        return sim_choice();
+    }
+    
+}
+
 
 
 
 int main(){
     choose_set();
-    std::cout << "Set chosen, now running timing tests: \n";
-    double time = non_threaded_timing();
+    std::cout << set_lookup() << " set chosen... \n";
+    double time = sim_choice();
 
-    std::cout << "Average time for " << "SET" << ": " << time << " seconds.\n";
-
-    if (stbi_write_png("mandelbrot.png", COL_NUM, ROW_NUM, 3, image.data(),  COL_NUM * 3)) {
-        std::cout << "Success! Check your folder for the image." << std::endl;
-    } else {
-        std::cerr << "Failed to save the image." << std::endl;
-    }
+    std::cout << "Average time for " << set_lookup() << " set: " << time << " seconds.\n";
 }

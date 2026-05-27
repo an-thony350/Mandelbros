@@ -1,14 +1,14 @@
 #include "definitions.hpp"
 
+// Global variables
 
 int chosen_set;
 double  z_real, z_imaginary;
-std::vector<std::pair<std::pair<double,double>, int>> map;
-std::vector<unsigned char> image(ROW_NUM * COL_NUM * 3);
+std::vector<unsigned char> image(ROW_NUM * COL_NUM * 3); // The brackets here define the size of the vector
 
 
                    
-std::pair<std::pair<double,double>, int>  Mandelbrot_calculation(double c_re, double c_im, int size){
+int Mandelbrot_calculation(double c_re, double c_im, int size){ // The image for this could be improved
     
     // Initial z values & iteration value
     double z_re = 0.0;
@@ -26,9 +26,8 @@ std::pair<std::pair<double,double>, int>  Mandelbrot_calculation(double c_re, do
 
         i++;
     }
-    return { {c_re, c_im}, i};
+    return i;
 }
-
 int Julia_calculation(double c_re, double c_im, double z_re, double z_im, int size){
 
     // Initial values
@@ -48,8 +47,7 @@ int Julia_calculation(double c_re, double c_im, double z_re, double z_im, int si
     }
     return i;
 }
-
-int Burning_Ship_calculation(double c_re, double c_im, int size){
+int Burning_Ship_calculation(double c_re, double c_im, int size){ // The image for this could be improved
 
     // Initial values
     double z_re = 0.0;
@@ -118,26 +116,28 @@ void choose_set(){
     return;
 }
 
-void Chosen_Function(double c_re, double c_im, double z_re, double z_im){
+int Chosen_Function(double c_re, double c_im, double z_re, double z_im){
     switch(chosen_set){
 
     case Mandelbrot:
-        map.push_back(Mandelbrot_calculation(c_re, c_im, ITER_NUM));
+        return Mandelbrot_calculation(c_re, c_im, ITER_NUM);
         break;
     case Julia:
-        Julia_calculation(z_re, z_im, c_re, c_im, ITER_NUM); //swapped here for ease
+        return Julia_calculation(z_re, z_im, c_re, c_im, ITER_NUM); //swapped here for ease
         break;
     case Burning_Ship:
-        Burning_Ship_calculation(c_re, c_im, ITER_NUM);
+        return Burning_Ship_calculation(c_re, c_im, ITER_NUM);
         break;
     case Tricorn:
-        Tricorn_calculation(c_re, c_im, ITER_NUM);
+        return Tricorn_calculation(c_re, c_im, ITER_NUM);
         break;
     default:
-         std::cout<<"Error incorrect input \n";
-         return;
+         std::cerr<<"Error incorrect input \n";
+         return 0;
     }
 }
+
+// Current colour palette - changes can be made later
 
 void palette(int iter, unsigned char& r, unsigned char& g, unsigned char& b){
     if(iter == ITER_NUM){
@@ -172,11 +172,10 @@ void Call_Calc(int start_row, int end_row){
 
             double c_re = (col - COL_NUM / 2.0) * 4.0 / COL_NUM;
 
-            Chosen_Function(c_re, c_im, z_real, z_imaginary); // maybe change what ths returns
+            int iter = Chosen_Function(c_re, c_im, z_real, z_imaginary);
             
             unsigned char r, g, b;
             
-            int iter = map.back().second;
             
             palette(iter, r, g, b);
 
@@ -185,6 +184,25 @@ void Call_Calc(int start_row, int end_row){
             image[index + 1] = g;
             image[index + 2] = b;
         }
+    }
+}
+
+std::string set_lookup(){
+    switch (chosen_set){
+    case 0:
+        return "Mandelbrot";
+        break;
+    case 1:
+        return "Julia";
+        break;
+    case 2:
+        return "Burning Ship";
+        break;
+    case 3:
+        return "Tricorn";
+    default:
+        return "Error - No set chosen";
+        break;
     }
 }
 

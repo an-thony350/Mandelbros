@@ -13,9 +13,8 @@
 
 #define ROW_NUM 720
 #define COL_NUM 1280
-#define TOTAL_LOOPS 1
+#define TOTAL_LOOPS 20
 #define ITER_NUM 256
-#define NUM_THREADS 16
 
 // Enumerator for set choice
 

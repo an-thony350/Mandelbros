@@ -16,6 +16,11 @@ int main(){
         }
 
 
+        if (stbi_write_png("Mandelbrot.png", COL_NUM, ROW_NUM, 3, image.data(),  COL_NUM * 3)) {
+        std::cout << "Success! Check your folder for the image." << std::endl;
+    } else {
+        std::cerr << "Failed to save the image." << std::endl;
+    }
         
 
    // double multiple = (Mandelbrot_Avr_T < Mandelbrot_Avr_NT) ? Mandelbrot_Avr_NT/Mandelbrot_Avr_T : Mandelbrot_Avr_T/Mandelbrot_Avr_NT;
