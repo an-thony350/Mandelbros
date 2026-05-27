@@ -1,16 +1,9 @@
 #include "definitions.hpp"
-#include "set_calculation.cpp"
+#include "functions.cpp"
 #include "timing_calculation.cpp"
 
 
-// Threaded implementation
-void Threaded_Mandel_iter(int start, int end){
-    for(int i = start; i < end; i++){
-        for(int j = 0; j < COL_NUM; j++){
-            Mandelbrot_calculation(i/ROW_NUM, j/COL_NUM, 256);
-        }
-    }
-}
+
 
 // to be worked on
 
