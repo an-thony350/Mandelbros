@@ -1,6 +1,25 @@
 #include "definitions.hpp"
 #include "set_calculation.cpp"
 
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
+
+std::vector<unsigned char> image(ROW_NUM * COL_NUM * 3);
+
+void palette(int iter, unsigned char& r, unsigned char& g, unsigned char& b){
+    if(iter == ITER_NUM){
+        r = 0; 
+        g = 0; 
+        b = 0;
+    }
+    else{
+        double gradient = double(iter) / double(ITER_NUM);
+
+        r = (unsigned char)(9* (1-gradient)* gradient * gradient * gradient * 255);
+        g = (unsigned char)(15 * (1-gradient) * (1-gradient) * gradient * gradient * 255);
+        b = (unsigned char)(8.5 * (1-gradient) * (1-gradient) * (1-gradient) * gradient * 255);
+    }
+}
 
 double average(std::vector<double> v){
     double ans = 0;
@@ -10,25 +29,28 @@ double average(std::vector<double> v){
     return ans;
 }
 
-// Raster iteration of grid, allows for threaded approach
 void Call_Calc(int start_row, int end_row){
-    double tmp_row_loop, tmp_col_loop;
 
-    for(start_row; start_row < end_row; start_row++){
+    for(int row = start_row; row < end_row; row++){
 
-        if(start_row >= ROW_NUM/2) tmp_row_loop = -1*start_row;
-        else tmp_row_loop = start_row;
+        double c_im = (row - ROW_NUM / 2.0) * 4.0 / ROW_NUM;
 
-        double c_re = (tmp_row_loop*2)/ROW_NUM;
+        for(int col = 0; col < COL_NUM; col++){
 
-        for(int col_loop = 0; col_loop < COL_NUM; col_loop++){
+            double c_re = (col - COL_NUM / 2.0) * 4.0 / COL_NUM;
 
-            if(col_loop < COL_NUM/2) tmp_col_loop = -1*col_loop;
-            else tmp_col_loop = col_loop;
+            Chosen_Function(c_re, c_im, z_real, z_imaginary); 
+            
+            unsigned char r, g, b;
+            
+            int iter = map.back().second;
+            
+            palette(iter, r, g, b);
 
-            double c_im = (tmp_col_loop*2)/COL_NUM;
-
-            Chosen_Function(c_re, c_im, z_real, z_imaginary);
+            int index = (row * COL_NUM + col) * 3;
+            image[index + 0] = r;
+            image[index + 1] = g;
+            image[index + 2] = b;
         }
     }
 }
@@ -82,6 +104,9 @@ double threaded_timing(){
     return average(timing_doubles);
 }
 
+
+
+
 int main(){
     choose_set();
     std::cout << "Set chosen, now running timing tests: \n";
@@ -89,8 +114,14 @@ int main(){
 
     std::cout << "Average time for " << "SET" << ": " << time << " seconds.\n";
 
-    std::cout << "Map c_re: " << map[920161].first.first << std::endl;
-    std::cout << "Map c_im: " << map[920161].first.second << std::endl;
-    std::cout << "Map iter num: " << map[920161].second << std::endl;
+
+
+
+
+    if (stbi_write_png("mandelbrot.png", COL_NUM, ROW_NUM, 3, image.data(), COL_NUM * 3)) {
+        std::cout << "Success! Check your folder for the image." << std::endl;
+    } else {
+        std::cerr << "Failed to save the image." << std::endl;
+    }
 
 }

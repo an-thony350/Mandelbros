@@ -5,11 +5,12 @@
 #include <chrono>
 #include <cmath>
 #include <thread>
+#include <unordered_map>
 
 // relevant defenitions
 
-#define ROW_NUM 1280
-#define COL_NUM 720
+#define ROW_NUM 720
+#define COL_NUM 1280
 #define TOTAL_LOOPS 1
 #define ITER_NUM 256
 #define NUM_THREADS 16
