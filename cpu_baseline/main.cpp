@@ -14,7 +14,9 @@ int main(){
 
     Generate_Image();
 
-    if (stbi_write_png("Mandelbrot.png", COL_NUM, ROW_NUM, 3, image.data(),  COL_NUM * 3)) {
+    std::string png = set_lookup() + ".png";
+    
+    if (stbi_write_png(png.c_str(), COL_NUM, ROW_NUM, 3, image.data(),  COL_NUM * 3)) {
         std::cout << "Success! Check your folder for the image." << std::endl;
     }
     else {

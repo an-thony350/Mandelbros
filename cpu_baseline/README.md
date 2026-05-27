@@ -14,6 +14,13 @@
 
 ## How to access
 
+In order to run the `main.cpp` file giving the png image of the set you require, follow these steps:
+
+1. Fork the repository
+2. In the terminal, paste this instruction: `cd Mandelbros/cpu_baseline`
+3. Paste the following command into the terminal: `source run.sh`
+4. Follow the steps in the terminal to generate the desired image
+
 ## Set calculations
 
 ## Pixel calculations  
