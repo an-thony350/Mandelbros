@@ -37,8 +37,8 @@ module reorder_buffer#(
     // Inputs from iter_core
     input logic [ITER_W-1:0]  in_iter_count,
     input logic [SEQ_W-1:0]   in_seq_num,
-    input logic signed [W-1:0]in_z_r,
-    input logic signed [W-1:0]in_z_i,
+    input logic signed [W-1:0] in_z_r,
+    input logic signed [W-1:0] in_z_i,
     input logic               in_escaped,
     input logic               in_overflow,
     input logic                in_valid,
@@ -74,6 +74,9 @@ localparam BUFFER_INDEX = $clog2(BUFFER_SIZE);
 logic [BUFFER_INDEX-1:0] wr_index;
 logic [BUFFER_INDEX-1:0] re_index;
 
+localparam int X_CNT_W = (SCREEN_W <= 1) ? 1 : $clog2(SCREEN_W);
+logic [X_CNT_W-1:0] out_x;
+
 logic [ITER_W-1:0]   buf_iter_count [BUFFER_SIZE-1:0];
 logic [SEQ_W-1:0]    buf_seq_num    [BUFFER_SIZE-1:0];
 logic signed [W-1:0] buf_z_r        [BUFFER_SIZE-1:0];
@@ -100,8 +103,8 @@ assign out_z_i        = buf_z_i[re_index];
 assign out_escaped    = buf_escaped[re_index];
 assign out_overflow   = buf_overflow[re_index];
 
-+assign out_sof        = out_valid && (out_seq_num == '0);
-+assign out_eol        = out_valid && ((out_seq_num % SCREEN_W) == (SCREEN_W-1));
+assign out_sof        = out_valid && (out_seq_num == '0);
+assign out_eol        = out_valid && (out_x == X_CNT_W'(SCREEN_W-1));
 assign out_hit_max    = out_valid && !out_escaped;
 
   
@@ -120,6 +123,7 @@ always_ff @(posedge clk) begin
 
     if(!rst_n) begin
         exp_seq_num <= 0;
+        out_x <= '0;
         valid <= 0;
     end
     else begin
@@ -127,6 +131,12 @@ always_ff @(posedge clk) begin
 
         if(out_valid && palette_ready) begin
             exp_seq_num <= exp_seq_num + 1;
+            if (out_x == X_CNT_W'(SCREEN_W-1)) begin
+                out_x <= '0;
+            end
+            else begin
+                out_x <= out_x + 1'b1;
+            end
         end
 
         // Write Path

@@ -1,7 +1,7 @@
 `timescale 1ns / 1ps
 
 module pixel_scheduler #(
-    parameter int NUM_CORES = 32,
+    parameter int NUM_CORES = 16,
     parameter int W         = 26,
     parameter int SEQ_W     = 20,
     parameter int ITER_W    = 16,

@@ -4,7 +4,7 @@
 	module pixel_scheduler_AXI #
 	(
 		// Users to add parameters here
-        parameter integer NUM_CORES = 32, 
+        parameter integer NUM_CORES = 16, 
         parameter integer W         = 26, 
         parameter integer SEQ_W     = 20, 
         parameter integer ITER_W    = 16, 

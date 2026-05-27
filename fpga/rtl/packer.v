@@ -75,41 +75,39 @@ always @* begin
         2'b00 : 
             begin 
                 //Output is not complete (valid) in this state, that means we are always ready for the next pixel.
-                tdata = {g, last_r, last_b, last_g}; //don't care since valid is false - just copy another state 
-                tvalid = 1'b0;
+                tdata = {r, last_b, last_g, last_r}; // don't care while tvalid is false                tvalid = 1'b0;
                 ready = 1'b1;
             end
         2'b01 :
             begin 
-                tdata = {g, last_r, last_b, last_g};
+                tdata = {r, last_b, last_g, last_r}; // bytes: p0.R p0.G p0.B p1.R
                 tvalid = valid;
                 ready = out_stream_tready;
             end
         2'b10 : 
             begin 
-                tdata = {b, g, last_r, last_b};
+                tdata = {g, r, last_b, last_g};      // bytes: p1.G p1.B p2.R p2.G
                 tvalid = valid;
                 ready = out_stream_tready;
             end
         2'b11 : 
             begin 
-                tdata = {r, b, g, last_r};
+                tdata = {b, g, r, last_b};           // bytes: p2.B p3.R p3.G p3.B
                 tvalid = valid;
                 ready = out_stream_tready;
             end
         default : 
             begin 
                 //Output is not complete (valid) in this state, that means we are always ready for the next pixel.
-                tdata = {g, last_r, last_b, last_g}; //don't care since valid is false - just copy another state 
-                tvalid = 1'b0;
+                tdata = {r, last_b, last_g, last_r}; // don't care while tvalid is false                        tvalid = 1'b0;
                 ready = 1'b1;
             end
     endcase
 end
 
 assign in_stream_ready = ready;
-assign out_stream_tlast = eol; //Assuming that end of line is never in state zero
-assign out_stream_tuser = sof_reg;
+assign out_stream_tlast = tvalid && eol;     // AXIS sidebands only meaningful on valid transfer
+assign out_stream_tuser = {tvalid && sof_reg};
 assign out_stream_tkeep = 4'hf; //Assuming that line contains a multiple of 4 bytes.
 assign out_stream_tdata = tdata;
 assign out_stream_tvalid = tvalid;
