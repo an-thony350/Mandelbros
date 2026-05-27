@@ -1,11 +1,5 @@
 #include "definitions.hpp"
-#include "functions.cpp"
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "stb_image_write.h"
-
-// global variable for thread implemention
-
-int NUM_THREADS;
+#include "functions.hpp"
 
 // Standard test
 
@@ -81,7 +75,7 @@ double sim_choice(){
         std::cout << "Choose the number of threads: \n";
         int thread_num;
         std::cin >> thread_num;
-        std::cout << thread_num << " threads chosen...\n";
+        std::cout << thread_num << " threads chosen, starting test...\n";
         std::cout << "\n";
         NUM_THREADS = thread_num;
         return threaded_timing();
@@ -93,9 +87,6 @@ double sim_choice(){
     }
     
 }
-
-
-
 
 int main(){
     choose_set();

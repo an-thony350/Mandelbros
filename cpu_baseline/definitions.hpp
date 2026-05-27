@@ -5,9 +5,6 @@
 #include <chrono>
 #include <cmath>
 #include <thread>
-#include <unordered_map>
-
-
 
 // relevant defenitions
 
@@ -15,6 +12,7 @@
 #define COL_NUM 1280
 #define TOTAL_LOOPS 20
 #define ITER_NUM 256
+#define MAIN_NUM_THREADS 16
 
 // Enumerator for set choice
 
@@ -22,7 +20,3 @@
 #define Julia 1
 #define Burning_Ship 2
 #define Tricorn 3
-
-
-// Set and variables for calculation
-// May not be necessary double row_start, row_end, col_start, col_end;

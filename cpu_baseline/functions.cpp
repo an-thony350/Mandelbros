@@ -1,12 +1,14 @@
 #include "definitions.hpp"
+#include "functions.hpp"
 
 // Global variables
 
 int chosen_set;
 double  z_real, z_imaginary;
 std::vector<unsigned char> image(ROW_NUM * COL_NUM * 3); // The brackets here define the size of the vector
+int NUM_THREADS;
 
-
+// Fractal Calculation Functions
                    
 int Mandelbrot_calculation(double c_re, double c_im, int size){ // The image for this could be improved
     
@@ -66,7 +68,6 @@ int Burning_Ship_calculation(double c_re, double c_im, int size){ // The image f
     }
     return i;
 }
-
 int Tricorn_calculation(double c_re, double c_im, int size){
 
     // Initial values
@@ -87,17 +88,7 @@ int Tricorn_calculation(double c_re, double c_im, int size){
     return i;
 }
 
-/* 
-May not be needed
-void determine_range( currently left as this but will be changed later ){
-    // Currently under assumption that calc occurs with range of +/- 2 on graphs
-
-    row_start = -1*(ROW_NUM/4);
-    row_end = ROW_NUM/4;
-    col_start = COL_NUM/4;
-    col_end = -1*(COL_NUM/4);
-}
-*/
+// Main Fractal Choice Functions
 
 void choose_set(){
     std::cout << "Choose which set to represent: \n";
@@ -115,7 +106,24 @@ void choose_set(){
     }
     return;
 }
-
+std::string set_lookup(){
+    switch (chosen_set){
+    case 0:
+        return "Mandelbrot";
+        break;
+    case 1:
+        return "Julia";
+        break;
+    case 2:
+        return "Burning Ship";
+        break;
+    case 3:
+        return "Tricorn";
+    default:
+        return "Error - No set chosen";
+        break;
+    }
+}
 int Chosen_Function(double c_re, double c_im, double z_re, double z_im){
     switch(chosen_set){
 
@@ -137,7 +145,7 @@ int Chosen_Function(double c_re, double c_im, double z_re, double z_im){
     }
 }
 
-// Current colour palette - changes can be made later
+// Colour Palette function - changes can be made later
 
 void palette(int iter, unsigned char& r, unsigned char& g, unsigned char& b){
     if(iter == ITER_NUM){
@@ -154,13 +162,7 @@ void palette(int iter, unsigned char& r, unsigned char& g, unsigned char& b){
     }
 }
 
-double average(std::vector<double> v){
-    double ans = 0;
-    for(int i = 0; i < v.size(); i++){
-        ans += v[i]/v.size();
-    }
-    return ans;
-}
+// Pixel calculation
 
 void Call_Calc(int start_row, int end_row){
 
@@ -187,22 +189,29 @@ void Call_Calc(int start_row, int end_row){
     }
 }
 
-std::string set_lookup(){
-    switch (chosen_set){
-    case 0:
-        return "Mandelbrot";
-        break;
-    case 1:
-        return "Julia";
-        break;
-    case 2:
-        return "Burning Ship";
-        break;
-    case 3:
-        return "Tricorn";
-    default:
-        return "Error - No set chosen";
-        break;
+// Image generation
+
+void Generate_Image(){
+    std::vector<std::thread> threads;
+    for(int thread_count = 0; thread_count < MAIN_NUM_THREADS; thread_count++){
+
+        int start_row = thread_count*(ROW_NUM/MAIN_NUM_THREADS);
+        int end_row = (thread_count == MAIN_NUM_THREADS - 1) ? ROW_NUM : start_row + ROW_NUM/MAIN_NUM_THREADS; // used for an uneven distribution of row loops - can be removed w/ assumption
+        threads.push_back(std::thread(Call_Calc, start_row, end_row));
+
+    }
+    
+    for(int thread_num = 0; thread_num < MAIN_NUM_THREADS; thread_num++){
+        threads[thread_num].join();
     }
 }
 
+// Timing functions
+
+double average(std::vector<double> v){
+    double ans = 0;
+    for(int i = 0; i < v.size(); i++){
+        ans += v[i]/v.size();
+    }
+    return ans;
+}
