@@ -13,6 +13,7 @@
 #define TOTAL_LOOPS 20
 #define ITER_NUM 256
 #define MAIN_NUM_THREADS 16
+#define ASPECT_RATIO 3.5
 
 // Enumerator for set choice
 

@@ -6,6 +6,7 @@ extern int chosen_set;
 extern double  z_real, z_imaginary;
 extern std::vector<unsigned char> image;
 extern int NUM_THREADS;
+extern double zoom_factor, center_x, center_y;
 
 // Fractal Calculation Functions
 

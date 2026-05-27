@@ -7,6 +7,7 @@ int chosen_set;
 double  z_real, z_imaginary;
 std::vector<unsigned char> image(ROW_NUM * COL_NUM * 3); // The brackets here define the size of the vector
 int NUM_THREADS;
+double zoom_factor, center_x, center_y;
 
 // Fractal Calculation Functions
                    
@@ -104,6 +105,24 @@ void choose_set(){
         std::cout << "Choose the imaginary value of c: \n";
         std::cin >> z_imaginary;
     }
+
+    // check these values
+
+    std::cout << "Choose a value for zoom\n";
+    std::cout << "min = 1.0\n";
+    std::cout << "max = 10000000\n";
+    std::cin >> zoom_factor;
+
+    std::cout << "Choose a center value for x\n";
+    std::cout << "min = -2.0\n";
+    std::cout << "max = 2.0\n";
+    std::cin >> center_x;
+
+    std::cout << "Choose a center value for y\n";
+    std::cout << "min = -2.0\n";
+    std::cout << "max = 2.0\n";
+    std::cin >> center_y;
+
     return;
 }
 std::string set_lookup(){
@@ -166,13 +185,15 @@ void palette(int iter, unsigned char& r, unsigned char& g, unsigned char& b){
 
 void Call_Calc(int start_row, int end_row){
 
+    double scale = ASPECT_RATIO / (COL_NUM * zoom_factor);
+
     for(int row = start_row; row < end_row; row++){
 
-        double c_im = (row - ROW_NUM / 2.0) * 4.0 / ROW_NUM;
+        double c_im = center_y + (row - ROW_NUM / 2.0) * scale;
 
         for(int col = 0; col < COL_NUM; col++){
 
-            double c_re = (col - COL_NUM / 2.0) * 4.0 / COL_NUM;
+            double c_re = center_x + (col - COL_NUM / 2.0) * scale;
 
             int iter = Chosen_Function(c_re, c_im, z_real, z_imaginary);
             
