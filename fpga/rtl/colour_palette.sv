@@ -1,10 +1,30 @@
 `timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company: 
+// Engineer: 
+// 
+// Create Date: 25.05.2026 22:20:46
+// Design Name: 
+// Module Name: colour_palette
+// Project Name: 
+// Target Devices: 
+// Tool Versions: 
+// Description: 
+// 
+// Dependencies: 
+// 
+// Revision:
+// Revision 0.01 - File Created
+// Additional Comments:
+// 
+//////////////////////////////////////////////////////////////////////////////////
 
 module colour_palette #(
     parameter int W      = 26,
     parameter int ITER_W = 16,
     parameter int SEQ_W = 20,
     parameter int PALETTE_BITS = 10
+
 )(
     input logic clk,
     input logic rst_n,
@@ -19,6 +39,8 @@ module colour_palette #(
     input  logic signed [W-1:0] in_z_i,
     input  logic                in_escaped,
     input  logic                in_overflow,
+    input logic                 in_sof,
+    input logic                 in_eol,
 
     // Output to framebuffer / pixel writer
     output logic                out_valid,
@@ -27,7 +49,9 @@ module colour_palette #(
     output logic [SEQ_W-1:0]    out_seq_num,
     output logic [7:0]          out_r,
     output logic [7:0]          out_g,
-    output logic [7:0]          out_b
+    output logic [7:0]          out_b,
+    output logic                out_sof,
+    output logic                out_eol
 );
 
     localparam int PALETTE_SIZE = 1 << PALETTE_BITS;
@@ -110,15 +134,24 @@ module colour_palette #(
             out_r       <= '0;
             out_g       <= '0;
             out_b       <= '0;
+            out_sof     <= 1'b0;
+            out_eol     <= 1'b0;
         end
         else if (palette_ready) begin
             out_valid <= in_valid;
-
+    
             if (in_valid) begin
                 out_seq_num <= in_seq_num;
                 out_r       <= rgb_c[23:16];
                 out_g       <= rgb_c[15:8];
                 out_b       <= rgb_c[7:0];
+    
+                out_sof     <= in_sof;
+                out_eol     <= in_eol;
+            end
+            else begin
+                out_sof <= 1'b0;
+                out_eol <= 1'b0;
             end
         end
     end
