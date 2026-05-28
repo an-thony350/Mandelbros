@@ -1,0 +1,3 @@
+[submodule "fpga/v1_release/ext/vivado-library"]
+	path = fpga/v1_release/ext/vivado-library
+	url = https://github.com/Digilent/vivado-library.git
