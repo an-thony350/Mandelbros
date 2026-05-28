@@ -166,3 +166,21 @@ In terms of the RTL, the next steps for the following week are as such:
 - Extension & Presentation Planning - Interim presentations are coming up in a weeks time therfore having a plan of what we will present and how we plan to expand our base design is key
 
 ## EEE Team
+
+### Summary
+This week focused on sourcing components and beginning the breadboard build for the FractalScope controller.
+
+### Components
+- Identified and finalised the required components from the bill of materials, including the Raspberry Pi Pico, rotary encoders, tactile buttons, joystick module, and linear potentiometers
+
+- Purchased all required components
+
+### Circuit
+- Components arrived and the initial circuit was assembled on the breadboard
+
+### Next Steps
+- Test the controller
+  
+- Work towards the Week 3 MVP: one encoder click producing a visible zoom change on the HDMI output
+
+- Begin PCB schematic design in KiCad
