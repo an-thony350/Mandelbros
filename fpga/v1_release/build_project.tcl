@@ -10,7 +10,7 @@ create_project $project_name $project_dir -part $part -force
 
 # 1. Point Vivado to your custom IP folder
 puts "Loading Custom IPs..."
-set_property ip_repo_paths {./ip_repo ./ext/vivado-library/ip} [current_project]
+set_property ip_repo_paths {./ip_repo ./ext/vivado-library  } [current_project]
 update_ip_catalog
 
 # 2. Add your constraints (HDMI pins, etc.)

@@ -58,7 +58,7 @@
         <spirit:parameters>
           <spirit:parameter>
             <spirit:name>viewChecksum</spirit:name>
-            <spirit:value>090fe4d2</spirit:value>
+            <spirit:value>8c9e5fd8</spirit:value>
           </spirit:parameter>
         </spirit:parameters>
       </spirit:view>
@@ -74,7 +74,7 @@
         <spirit:parameters>
           <spirit:parameter>
             <spirit:name>viewChecksum</spirit:name>
-            <spirit:value>090fe4d2</spirit:value>
+            <spirit:value>8c9e5fd8</spirit:value>
           </spirit:parameter>
         </spirit:parameters>
       </spirit:view>
@@ -460,25 +460,8 @@
       <spirit:file>
         <spirit:name>src/iter_core_array.sv</spirit:name>
         <spirit:fileType>systemVerilogSource</spirit:fileType>
-        <spirit:userFileType>CHECKSUM_10ad00d6</spirit:userFileType>
+        <spirit:userFileType>CHECKSUM_880a5013</spirit:userFileType>
         <spirit:userFileType>IMPORTED_FILE</spirit:userFileType>
-      </spirit:file>
-      <spirit:file>
-        <spirit:name>../../non_ip_blocks/iter_core_array/iter_core_array.srcs/sources_1/new/iter_core_array.sv</spirit:name>
-        <spirit:fileType>systemVerilogSource</spirit:fileType>
-      </spirit:file>
-      <spirit:file>
-        <spirit:name>../../non_ip_blocks/iter_core_array/iter_core_array.srcs/sources_1/new/arbiter.sv</spirit:name>
-        <spirit:fileType>systemVerilogSource</spirit:fileType>
-      </spirit:file>
-      <spirit:file>
-        <spirit:name>../../non_ip_blocks/iter_core_array/iter_core_array.srcs/sources_1/new/iter_core.sv</spirit:name>
-        <spirit:fileType>systemVerilogSource</spirit:fileType>
-      </spirit:file>
-      <spirit:file>
-        <spirit:name>../../non_ip_blocks/iter_core_array/iter_core_array.srcs/sources_1/new/skid_buffer.sv</spirit:name>
-        <spirit:fileType>systemVerilogSource</spirit:fileType>
-        <spirit:userFileType>CHECKSUM_d0c811bc</spirit:userFileType>
       </spirit:file>
     </spirit:fileSet>
     <spirit:fileSet>
@@ -502,22 +485,6 @@
         <spirit:name>src/iter_core_array.sv</spirit:name>
         <spirit:fileType>systemVerilogSource</spirit:fileType>
         <spirit:userFileType>IMPORTED_FILE</spirit:userFileType>
-      </spirit:file>
-      <spirit:file>
-        <spirit:name>../../non_ip_blocks/iter_core_array/iter_core_array.srcs/sources_1/new/iter_core_array.sv</spirit:name>
-        <spirit:fileType>systemVerilogSource</spirit:fileType>
-      </spirit:file>
-      <spirit:file>
-        <spirit:name>../../non_ip_blocks/iter_core_array/iter_core_array.srcs/sources_1/new/arbiter.sv</spirit:name>
-        <spirit:fileType>systemVerilogSource</spirit:fileType>
-      </spirit:file>
-      <spirit:file>
-        <spirit:name>../../non_ip_blocks/iter_core_array/iter_core_array.srcs/sources_1/new/iter_core.sv</spirit:name>
-        <spirit:fileType>systemVerilogSource</spirit:fileType>
-      </spirit:file>
-      <spirit:file>
-        <spirit:name>../../non_ip_blocks/iter_core_array/iter_core_array.srcs/sources_1/new/skid_buffer.sv</spirit:name>
-        <spirit:fileType>systemVerilogSource</spirit:fileType>
       </spirit:file>
     </spirit:fileSet>
     <spirit:fileSet>
@@ -597,13 +564,13 @@
       </xilinx:taxonomies>
       <xilinx:displayName>iter_core_array_v1_0</xilinx:displayName>
       <xilinx:definitionSource>package_project</xilinx:definitionSource>
-      <xilinx:coreRevision>5</xilinx:coreRevision>
-      <xilinx:coreCreationDateTime>2026-05-26T22:54:49Z</xilinx:coreCreationDateTime>
+      <xilinx:coreRevision>7</xilinx:coreRevision>
+      <xilinx:coreCreationDateTime>2026-05-28T13:26:20Z</xilinx:coreCreationDateTime>
     </xilinx:coreExtensions>
     <xilinx:packagingInfo>
       <xilinx:xilinxVersion>2023.2</xilinx:xilinxVersion>
       <xilinx:checksum xilinx:scope="busInterfaces" xilinx:value="1d91acf1"/>
-      <xilinx:checksum xilinx:scope="fileGroups" xilinx:value="90e0f5ad"/>
+      <xilinx:checksum xilinx:scope="fileGroups" xilinx:value="7759eec2"/>
       <xilinx:checksum xilinx:scope="ports" xilinx:value="94278faa"/>
       <xilinx:checksum xilinx:scope="hdlParameters" xilinx:value="36f27903"/>
       <xilinx:checksum xilinx:scope="parameters" xilinx:value="65e32aac"/>
