@@ -1,17 +1,20 @@
 `timescale 1ns / 1ps
 
-// AXI-Lite smoke test for pixel_scheduler_top / pixel_scheduler_AXI.
+// AXI-Lite final-parameter test for pixel_scheduler_top / pixel_scheduler_AXI.
+// Mirrors final geometry: NUM_CORES=16, X_RES=1280, Y_RES=720.
 
 module pixel_scheduler_axi_tb;
 
-    localparam int NUM_CORES = 4;
+    // Set xsim.simulate.runtime to all, or at least around 12 ms.
+
+    localparam int NUM_CORES = 16;
     localparam int W         = 26;
     localparam int FRAC      = 22;
     localparam int SEQ_W     = 20;
     localparam int ITER_W    = 16;
     localparam int MODE_W    = 3;
-    localparam int X_RES     = 4;
-    localparam int Y_RES     = 2;
+    localparam int X_RES     = 1280;
+    localparam int Y_RES     = 720;
     localparam int PIXELS    = X_RES * Y_RES;
 
     logic clk = 1'b0;
@@ -202,8 +205,8 @@ module pixel_scheduler_axi_tb;
                     logic signed [W-1:0] expected_ci;
                     x = dispatches % X_RES;
                     y = dispatches / X_RES;
-                    expected_cr = q_from_real(-2.0) + x * q_from_real(0.5);
-                    expected_ci = q_from_real(-1.0) + y * q_from_real(0.5);
+                    expected_cr = q_from_real(-2.0)   + x * q_from_real(3.0 / 1280.0);
+                    expected_ci = q_from_real(-1.125) + y * q_from_real(2.25 / 720.0);
                     tb_check(cr_for_valid() == expected_cr, "c_r did not match configured coordinate ramp");
                     tb_check(ci_for_valid() == expected_ci, "c_i did not match configured coordinate ramp");
                 end
@@ -220,7 +223,7 @@ module pixel_scheduler_axi_tb;
 
     initial begin
         $display("================================================");
-        $display(" pixel_scheduler_axi_tb starting");
+        $display(" pixel_scheduler_axi_tb final 16-core 720p starting");
         $display("================================================");
 
         in_ready = '1;
@@ -239,13 +242,13 @@ module pixel_scheduler_axi_tb;
         // Register map: reg0 x_jump, reg1 y_jump, reg2 x_min, reg3 y_min,
         // reg4 jul_c_r, reg5 jul_c_i, reg6 {mode[18:16], max_iter[15:0]},
         // reg7[0] run enable.
-        write_and_check(5'h00, reg_from_q(q_from_real( 0.5)),   "x_jump");
-        write_and_check(5'h04, reg_from_q(q_from_real( 0.5)),   "y_jump");
+        write_and_check(5'h00, reg_from_q(q_from_real( 3.0 / 1280.0)), "x_jump");
+        write_and_check(5'h04, reg_from_q(q_from_real( 2.25 / 720.0)), "y_jump");
         write_and_check(5'h08, reg_from_q(q_from_real(-2.0)),   "x_min");
-        write_and_check(5'h0C, reg_from_q(q_from_real(-1.0)),   "y_min");
+        write_and_check(5'h0C, reg_from_q(q_from_real(-1.125)), "y_min");
         write_and_check(5'h10, reg_from_q(q_from_real(-0.8)),   "jul_c_r");
         write_and_check(5'h14, reg_from_q(q_from_real( 0.156)), "jul_c_i");
-        write_and_check(5'h18, {13'd0, 3'd0, 16'd16},           "mode_max_iter");
+        write_and_check(5'h18, {13'd0, 3'd0, 16'd256},          "mode_max_iter");
 
         repeat (5) @(posedge clk);
         tb_check(dispatches == 0, "scheduler dispatched while configured but not started");
@@ -254,8 +257,11 @@ module pixel_scheduler_axi_tb;
         checking_frame = 1'b1;
         axi_write(5'h1C, 32'h0000_0001);
 
-        for (int cycle = 0; cycle < 200; cycle++) begin
+        for (int cycle = 0; cycle < (PIXELS + 2000); cycle++) begin
             @(posedge clk);
+            if ((cycle != 0) && ((cycle % 100000) == 0)) begin
+                $display("[PROGRESS] AXI scheduler cycle=%0d dispatches=%0d/%0d fails=%0d", cycle, dispatches, PIXELS, fails);
+            end
             if (dispatches == PIXELS) begin
                 repeat (4) @(posedge clk);
                 tb_check(dispatches == PIXELS, "scheduler did not dispatch exactly one frame");
@@ -275,7 +281,7 @@ module pixel_scheduler_axi_tb;
             end
         end
 
-        $fatal(1, "tb timed out: dispatches=%0d fails=%0d", dispatches, fails);
+        $fatal(1, "tb timed out: dispatches=%0d/%0d fails=%0d", dispatches, PIXELS, fails);
     end
 
 endmodule
