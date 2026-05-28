@@ -1,5 +1,27 @@
 
 `timescale 1 ns / 1 ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company: Mandelbros
+// Engineers: Anthony Bartlett & Denzil Erza-Essien
+// 
+// Create Date: 28.05.2026
+// Design Name: Pixel Scheduler with AXI-Lite Interface
+// Module Name: Pixel_Scheduler_AXI
+// Project Name: FractalScope
+// Target Devices: PYNQ-Z1
+// Tool Versions: Vivado 2023.2
+// Description: This module implements a pixel scheduler for the fractal iteration 
+//				process, interfacing with an AXI-Lite bus for configuration and control. 
+//				It receives parameters such as jump values, minimum coordinates, 
+//				maximum iterations, and mode settings from the AXI-Lite registers, 
+//				and outputs the necessary data for each pixel to be processed by 
+//				the fractal computation cores. The module also includes a start 
+//				signal controlled by software through the AXI-Lite interface.
+// 
+// Dependencies: pixel_scheduler.sv
+//
+// Additional Comments: Line 484 is where our user-logic begins
+////////////////////////////////////////////////////////////////////////////////// 
 
 	module pixel_scheduler_AXI #
 	(
@@ -460,7 +482,6 @@
 	// Add user logic here
     
     // starting frame logic
-    
     wire software_run;
     assign software_run = slv_reg7[0];
     

@@ -1,26 +1,24 @@
 `timescale 1ns / 1ps
 //////////////////////////////////////////////////////////////////////////////////
-// Company: The Mandelbros
-// Engineer: Denzil Erza-Essien
+// Company: Mandelbros
+// Engineers: Anthony Bartlett & Denzil Erza-Essien
 // 
-// Create Date: 19.05.2026 15:09:37
+// Create Date: 28.05.2026
 // Design Name: Reorder Buffer
-// Module Name: reoroder_buffer
-// Project Name: 
-// Target Devices: 
-// Tool Versions: 
-// Description: 
+// Module Name: reorder_buffer
+// Project Name: FractalScope
+// Target Devices: PYNQ-Z1
+// Tool Versions: Vivado 2023.2
+// Description: Buffers and reorders pixel results from the iteration cores to 
+//              ensure they are sent to the palette LUT in the correct sequence 
+//              for display. It handles out-of-order completion of pixel computations, 
+//              ensuring that the output stream to the palette is correctly ordered 
+//              by pixel sequence number.
 // 
-// Dependencies: TBD
-// 
-// Revision:
-// Revision 0.01 - File Created
-// Additional Comments:
-// 
-//////////////////////////////////////////////////////////////////////////////////
-
-
-
+// Dependencies: None
+//
+// Additional Comments: None
+////////////////////////////////////////////////////////////////////////////////// 
 
 module reorder_buffer#(
     parameter int W      = 26,
@@ -86,7 +84,6 @@ logic                buf_overflow   [BUFFER_SIZE-1:0];
 assign wr_index =in_seq_num[BUFFER_INDEX-1:0];
 assign re_index = exp_seq_num[BUFFER_INDEX-1:0];
 
-// Add an occupancy counter (needs to hold up to BUFFER_SIZE, so BUFFER_INDEX + 1 bits)
 logic [BUFFER_INDEX:0] occupancy;
 // The buffer is ready as long as it isn't completely full
 assign out_ready = (occupancy < BUFFER_SIZE);
@@ -107,6 +104,7 @@ assign out_hit_max    = out_valid && !out_escaped;
 
 logic [11:0] x_cnt;
 
+// Track the x coordinate for EOL signaling. Increment on every valid output pixel.
 always_ff @(posedge clk) begin
     if (!rst_n) begin
         x_cnt <= '0;
@@ -119,7 +117,8 @@ always_ff @(posedge clk) begin
 end
 
 assign out_eol = (x_cnt == SCREEN_W - 1);
-  
+
+// Next valid logic: Set on write, clear on read. Write takes priority if both happen on same cycle.  
 always_comb begin
         next_valid = valid;
         
@@ -131,8 +130,8 @@ always_comb begin
         end
     end
 
+// Sequential logic for buffer management and occupancy tracking
 always_ff @(posedge clk) begin
-
     if(!rst_n) begin
         exp_seq_num <= 0;
         valid <= 0;

@@ -1,23 +1,26 @@
 `timescale 1ns / 1ps
 //////////////////////////////////////////////////////////////////////////////////
-// Company: 
-// Engineer: 
+// Company: Mandelbros
+// Engineers: Anthony Bartlett & Denzil Erza-Essien
 // 
-// Create Date: 23.05.2026 12:34:37
-// Design Name: 
+// Create Date: 28.05.2026
+// Design Name: Arbiter
 // Module Name: arbiter
-// Project Name: 
-// Target Devices: 
-// Tool Versions: 
-// Description: 
+// Project Name: FractalScope
+// Target Devices: PYNQ-Z1
+// Tool Versions: Vivado 2023.2
+// Description: Round-robin arbiter for managing access to shared resources
 // 
-// Dependencies: 
-// 
-// Revision:
-// Revision 0.01 - File Created
-// Additional Comments:
-// 
-//////////////////////////////////////////////////////////////////////////////////
+// Dependencies: None
+//
+// Additional Comments: This module implements a round-robin arbiter that takes 
+//                      valid/ready handshakes from multiple producer cores and
+//                      grants access to a single consumer (reorder buffer). It 
+//                      ensures fair access while also handling backpressure from 
+//                      the consumer. The design is optimized for timing by 
+//                      minimizing combinational logic in the critical path and 
+//                      using explicit ready/valid signals to break timing loops.
+//////////////////////////////////////////////////////////////////////////////////  
 
 
 (* keep_hierarchy = "yes" *)
@@ -66,9 +69,7 @@ module result_arbiter #(
     logic [CORE_IDX_W-1:0] selected_idx;
     logic                  selected_valid;
 
-    // -------------------------------------------------------------------------
-    // VIVADO BUG FIX: Unpack flat 1D arrays into 2D arrays using constant indexing
-    // -------------------------------------------------------------------------
+    // Unpack flat 1D arrays into 2D arrays using constant indexing
     logic [SEQ_W-1:0]    seq_2d  [NUM_CORES];
     logic [ITER_W-1:0]   iter_2d [NUM_CORES];
     logic signed [W-1:0] z_r_2d  [NUM_CORES];
@@ -83,9 +84,7 @@ module result_arbiter #(
         end
     end
 
-    // -------------------------------------------------------------------------
     // Round-robin grant selection (Optimized for Timing)
-    // -------------------------------------------------------------------------
     logic [NUM_CORES-1:0] masked_req;
     
     always_comb begin
@@ -119,9 +118,7 @@ module result_arbiter #(
         end
     end
 
-    // -------------------------------------------------------------------------
     // Hold/Grant Selection
-    // -------------------------------------------------------------------------
     always_comb begin
         if (hold_valid) begin
             selected_valid = 1'b1;
@@ -133,9 +130,7 @@ module result_arbiter #(
         end
     end
 
-    // -------------------------------------------------------------------------
-    // DATA MUX: Safely index the 2D arrays (No variable part-selects!)
-    // -------------------------------------------------------------------------
+    // index the 2D arrays 
     always_comb begin
         rob_in_valid      = selected_valid;
 
@@ -156,9 +151,7 @@ module result_arbiter #(
         end
     end
 
-    // -------------------------------------------------------------------------
-    // READY DEMUX: Explicit assignment to prevent synthesizer loops
-    // -------------------------------------------------------------------------
+    // Explicit assignment to prevent synthesizer loops
     always_comb begin
         for (int i = 0; i < NUM_CORES; i++) begin
             if (selected_valid && (selected_idx == i)) begin
@@ -169,9 +162,7 @@ module result_arbiter #(
         end
     end
 
-    // -------------------------------------------------------------------------
     // Sequential state
-    // -------------------------------------------------------------------------
     always_ff @(posedge clk) begin
         if (!rst_n) begin
             rr_ptr     <= '0;

@@ -1,30 +1,23 @@
 `timescale 1ns / 1ps
 //////////////////////////////////////////////////////////////////////////////////
-// Company: 
-// Engineer: 
+// Company: Mandelbros
+// Engineers: Anthony Bartlett & Denzil Erza-Essien
 // 
-// Create Date: 21.05.2026 16:44:53
-// Design Name: 
+// Create Date: 28.05.2026
+// Design Name: Iteration Core
 // Module Name: iter_core
-// Project Name: 
-// Target Devices: 
-// Tool Versions: 
-// Description: 
-// 
-// Dependencies: 
-// 
-// Revision:
-// Revision 0.01 - File Created
-// Additional Comments:
-// 
-//////////////////////////////////////////////////////////////////////////////////
-
-
-// 7-stage pipelined fixed-point fractal iteration core.
-// Computes either Tricorn, Burning Ship, Mandelbrot, or Julia iterations based on the mode field
-// Iteration terminates when |z|^2 > 4 (escape) or iter == max_iter (in set).
-// i know the variable naming conventions are a bit suspect, but they make sense if you think hard enough
-
+// Project Name: FractalScope
+// Target Devices: PYNQ-Z1
+// Tool Versions: Vivado 2023.2
+// Description: 7-stage pipelined fixed-point fractal iteration core.
+//              Computes either Tricorn, Burning Ship, Mandelbrot, or Julia 
+//              iterations based on the mode field
+//              Iteration terminates when |z|^2 > 4 (escape) or iter == max_iter (in set).
+//
+// Dependencies: None
+//
+// Additional Comments: 
+////////////////////////////////////////////////////////////////////////////////// 
 
 module iter_core #(
     parameter int W       = 26,    
@@ -372,7 +365,6 @@ module iter_core #(
     end
 
 endmodule
-
 
 
 

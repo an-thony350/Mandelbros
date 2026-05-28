@@ -1,3 +1,20 @@
+`timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company: Mandelbros
+// Engineers: Anthony Bartlett & Denzil Erza-Essien
+// 
+// Create Date: 28.05.2026
+// Design Name: Pixel Scheduler Top
+// Module Name: Pixel_Scheduler_top
+// Project Name: FractalScope
+// Target Devices: PYNQ-Z1
+// Tool Versions: Vivado 2023.2
+// Description: Top-level module for the pixel scheduler
+// 
+// Dependencies: pixel_scheduler_AXI, pixel_scheduler.sv
+//
+// Additional Comments: None
+////////////////////////////////////////////////////////////////////////////////// 
 
 `timescale 1 ns / 1 ps
 

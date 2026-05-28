@@ -1,23 +1,20 @@
 `timescale 1ns / 1ps
 //////////////////////////////////////////////////////////////////////////////////
-// Company: 
-// Engineer: 
+// Company: Mandelbros
+// Engineers: Anthony Bartlett & Denzil Erza-Essien
 // 
-// Create Date: 24.05.2026 15:35:21
-// Design Name: 
+// Create Date: 28.05.2026
+// Design Name: Skid Buffer
 // Module Name: skid_buffer
-// Project Name: 
-// Target Devices: 
-// Tool Versions: 
-// Description: 
+// Project Name: FractalScope
+// Target Devices: PYNQ-Z1
+// Tool Versions: Vivado 2023.2
+// Description: A simple 2-deep skid buffer to decouple the iteration cores from the result arbiter.
 // 
-// Dependencies: 
-// 
-// Revision:
-// Revision 0.01 - File Created
-// Additional Comments:
-// 
-//////////////////////////////////////////////////////////////////////////////////
+// Dependencies: None
+//
+// Additional Comments: None
+////////////////////////////////////////////////////////////////////////////////// 
 
 `timescale 1ns / 1ps
 
@@ -47,15 +44,12 @@ module skid_buffer_m #(
     logic       rd_ptr;
     logic [1:0] count;
 
-    // -------------------------------------------------------------------------
-    // THE TIMING FIX: 
-    // in_ready and out_valid are now driven purely by a local flip-flop (count).
-    // There is ZERO combinational path between the Arbiter and the Iter Cores.
-    // -------------------------------------------------------------------------
+    // Handshakes
     assign in_ready  = (count < 2'd2);
     assign out_valid = (count > 2'd0);
     assign out_data  = fifo[rd_ptr];
 
+    // Sequential logic for buffer management
     always_ff @(posedge clk) begin
         if (!rst_n) begin
             wr_ptr <= 1'b0;

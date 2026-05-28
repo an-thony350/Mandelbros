@@ -1,4 +1,23 @@
 `timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company: Mandelbros
+// Engineers: Anthony Bartlett & Denzil Erza-Essien
+// 
+// Create Date: 28.05.2026
+// Design Name: Pixel Scheduler
+// Module Name: pixel_scheduler
+// Project Name: FractalScope
+// Target Devices: PYNQ-Z1
+// Tool Versions: Vivado 2023.2
+// Description: Schedules pixel computations for the fractal rendering engine, 
+//              dispatching them to available cores and managing the sequencing of 
+//              pixel processing. It supports both Mandelbrot and Julia set 
+//              computations based on the input mode.
+// 
+// Dependencies: None
+//
+// Additional Comments: None
+////////////////////////////////////////////////////////////////////////////////// 
 
 module pixel_scheduler #(
     parameter int NUM_CORES = 16,
@@ -12,20 +31,24 @@ module pixel_scheduler #(
     input logic clk,
     input logic rst_n,
 
+    // Parameters for pixel coordinate generation
     input logic signed [W-1:0] x_jump,
     input logic signed [W-1:0] y_jump,
     input logic signed [W-1:0] x_min,
     input logic signed [W-1:0] y_min,
     output logic               last_pixel,
 
+    // Parameters for Julia set (ignored for Mandelbrot)
     input logic signed [W-1:0] jul_c_r,
     input logic signed [W-1:0] jul_c_i,
     input logic [ITER_W-1:0]   in_max_iter,
     input logic [MODE_W-1:0]   in_mode,
 
+    // Outputs to cores
     input  logic [NUM_CORES-1:0] in_ready,
     output logic [NUM_CORES-1:0] in_valid,
 
+    // Pixel data outputs to cores
     output logic signed [(W*NUM_CORES)-1:0] c_r,
     output logic signed [(W*NUM_CORES)-1:0] c_i,
     output logic signed [(W*NUM_CORES)-1:0] z0_r,
@@ -35,12 +58,14 @@ module pixel_scheduler #(
     output logic [(SEQ_W*NUM_CORES)-1:0]    out_seq 
 );
 
+    // Local parameters for internal calculations
     localparam int CORE_IDX_W = (NUM_CORES <= 1) ? 1 : $clog2(NUM_CORES);
     localparam int X_W        = (X_RES <= 1) ? 1 : $clog2(X_RES);
     localparam int Y_W        = (Y_RES <= 1) ? 1 : $clog2(Y_RES);
 
     localparam logic [MODE_W-1:0] MODE_JULIA = 3'd1;
 
+    // Internal signals
     logic [CORE_IDX_W-1:0] chosen_core;
     logic                  available_core;
     logic                  dispatch;
@@ -58,6 +83,7 @@ module pixel_scheduler #(
     logic [Y_W-1:0]      y;
     logic [SEQ_W-1:0]    seq;
 
+    // Core selection logic: Find the first available core
     assign available_core = |in_ready;
     assign dispatch       = rst_n && available_core && !frame_done;
 
@@ -73,6 +99,7 @@ module pixel_scheduler #(
         end
     end
 
+    // Pixel parameter assignment based on mode
     always_comb begin
         if (in_mode == MODE_JULIA) begin
             pixel_c_r  = jul_c_r;
@@ -88,6 +115,7 @@ module pixel_scheduler #(
         end
     end
 
+    // Dispatch pixel parameters to the chosen core
     generate
         for (genvar gi = 0; gi < NUM_CORES; gi++) begin : core_parse
 
@@ -103,6 +131,7 @@ module pixel_scheduler #(
         end
     endgenerate
 
+    // Update pixel coordinates and sequence number on dispatch
     always_ff @(posedge clk) begin
         if (!rst_n) begin
             x          <= '0;

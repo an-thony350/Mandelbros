@@ -1,23 +1,23 @@
 `timescale 1ns / 1ps
 //////////////////////////////////////////////////////////////////////////////////
-// Company: 
-// Engineer: 
+// Company: Mandelbros
+// Engineers: Anthony Bartlett & Denzil Erza-Essien
 // 
-// Create Date: 19.05.2026 17:48:00
-// Design Name: 
-// Module Name: 
-// Project Name: 
-// Target Devices: 
-// Tool Versions: 
-// Description: 
+// Create Date: 28.05.2026
+// Design Name: Performance Counters
+// Module Name: perf_counters
+// Project Name: FractalScope
+// Target Devices: PYNQ-Z1
+// Tool Versions: Vivado 2023.2
+// Description: Module to track performance counters for the fractal iteration process, 
+//              including frame cycles, total iterations, pixels escaped, and pixels 
+//              that hit the maximum iteration count. Counters are updated on each pixel 
+//              processed and snapshotted at the start of each new frame.
 // 
-// Dependencies: 
-// 
-// Revision:
-// Revision 0.01 - File Created
-// Additional Comments:
-// 
-//////////////////////////////////////////////////////////////////////////////////
+// Dependencies: None
+//
+// Additional Comments: None
+////////////////////////////////////////////////////////////////////////////////// 
 
 module perf_counters#(
     parameter ITER_W = 16
