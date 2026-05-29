@@ -1,4 +1,3 @@
-`timescale 1ns / 1ps
 //////////////////////////////////////////////////////////////////////////////////
 // Company: Mandelbros
 // Engineers: Anthony Bartlett & Denzil Erza-Essien
@@ -41,6 +40,8 @@
         input wire  [NUM_CORES-1:0]     in_ready,
         output wire [NUM_CORES-1:0]     in_valid,
         output wire                     last_pixel,
+        
+        output wire render_rst_n_out,
         
         output wire signed [(W*NUM_CORES)-1:0]      c_r,
         output wire signed [(W*NUM_CORES)-1:0]      c_i,
@@ -91,6 +92,7 @@
 	    .in_ready(in_ready),
         .last_pixel(last_pixel),
         .in_valid(in_valid),
+        .render_rst_n_out(render_rst_n_out),
         .c_r(c_r),
         .c_i(c_i),
         .z0_r(z0_r),
@@ -126,3 +128,4 @@
 	// User logic ends
 
 	endmodule
+

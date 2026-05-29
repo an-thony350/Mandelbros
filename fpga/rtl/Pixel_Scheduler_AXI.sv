@@ -47,6 +47,8 @@
         output wire [NUM_CORES-1:0]     in_valid,
         output wire                     last_pixel,
         
+        output wire                     render_rst_n_out,
+        
         output wire signed [(W*NUM_CORES)-1:0]      c_r,
         output wire signed [(W*NUM_CORES)-1:0]      c_i,
         output wire signed [(W*NUM_CORES)-1:0]      z0_r,
@@ -482,9 +484,18 @@
 	// Add user logic here
     
     // starting frame logic
-    wire software_run;
-    assign software_run = slv_reg7[0];
     
+    wire software_run;
+    wire render_rst_n;
+
+    assign software_run = slv_reg7[0];
+
+    // Active-low render reset.
+    // AXI register interface remains controlled by S_AXI_ARESETN only.
+    // The render datapath is controlled by S_AXI_ARESETN AND software_run.
+    assign render_rst_n = S_AXI_ARESETN && software_run;
+
+    assign render_rst_n_out = render_rst_n;
     // pixel sched
     pixel_scheduler#(
         .NUM_CORES(NUM_CORES),
@@ -496,7 +507,7 @@
         .Y_RES(Y_RES)
     ) pixel_scheduler_final (
         .clk(S_AXI_ACLK),
-        .rst_n(S_AXI_ARESETN == 1'b1 && software_run), // reset will occur on either system side or software not running
+        .rst_n(render_rst_n), // reset will occur on either system side or software not running
         
         // Inputs from slave registers
         
