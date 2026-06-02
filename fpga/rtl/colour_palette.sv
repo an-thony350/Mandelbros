@@ -31,8 +31,6 @@ module colour_palette #(
 
     input  logic [ITER_W-1:0]   in_iter_count,
     input  logic [SEQ_W-1:0]    in_seq_num,
-    input  logic signed [W-1:0] in_z_r,
-    input  logic signed [W-1:0] in_z_i,
     input  logic                in_escaped,
     input  logic                in_overflow,
     input logic                 in_sof,
@@ -60,10 +58,6 @@ module colour_palette #(
     assign palette_index = in_iter_count[PALETTE_BITS-1:0];
 
     assign palette_ready = !out_valid || out_ready;
-
-    // Keep z_r/z_i deliberately available for future
-    logic unused_z_inputs;
-    assign unused_z_inputs = ^{in_z_r, in_z_i};
 
     // to replace with a real 1024-entry ROM/BRAM palette LUT or AXI-writable palette at some point
 
