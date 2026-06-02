@@ -51,8 +51,6 @@ module iter_core_array #(
     output wire               out_valid,
     output wire  [SEQ_W-1:0]  out_seq,
     output wire  [ITER_W-1:0] out_iter,
-    output wire  [W-1:0]      out_z_r,
-    output wire  [W-1:0]      out_z_i,
     output wire               out_escaped,
     output wire               out_overflow
 );
@@ -60,9 +58,7 @@ module iter_core_array #(
     // Calculate the exact bit offsets
     localparam int OVF_BIT  = 0;
     localparam int ESC_BIT  = 1;
-    localparam int ZI_BIT   = 2;
-    localparam int ZR_BIT   = ZI_BIT + W;
-    localparam int ITER_BIT = ZR_BIT + W;
+    localparam int ITER_BIT = 2;
     localparam int SEQ_BIT  = ITER_BIT + ITER_W;
     localparam int TOTAL_W  = SEQ_BIT + SEQ_W;
 
@@ -75,8 +71,6 @@ module iter_core_array #(
     // Flat arrays strictly for the Arbiter input
     wire [(SEQ_W*NUM_CORES)-1:0]  core_out_seq;
     wire [(ITER_W*NUM_CORES)-1:0] core_out_iter;
-    wire [(W*NUM_CORES)-1:0]      core_out_z_r;
-    wire [(W*NUM_CORES)-1:0]      core_out_z_i;
     wire [NUM_CORES-1:0]          core_out_escaped;
     wire [NUM_CORES-1:0]          core_out_overflow;
     
@@ -87,8 +81,6 @@ module iter_core_array #(
             // Local wires
             wire [SEQ_W-1:0]  c_seq;
             wire [ITER_W-1:0] c_iter;
-            wire [W-1:0]      c_z_r;
-            wire [W-1:0]      c_z_i;
             wire              c_esc;
             wire              c_ovf;
             
@@ -126,8 +118,6 @@ module iter_core_array #(
                 // Maps into local wires
                 .out_seq    ( c_seq ),
                 .out_iter   ( c_iter ),
-                .out_z_r    ( c_z_r ),
-                .out_z_i    ( c_z_i ),
                 .out_escaped( c_esc ),
                 .out_overflow( c_ovf )
             );
@@ -135,22 +125,20 @@ module iter_core_array #(
             // Explicit combinational packing into a single wide wire
             assign skid_in_wire[OVF_BIT]            = c_ovf;
             assign skid_in_wire[ESC_BIT]            = c_esc;
-            assign skid_in_wire[ZI_BIT   +: W]      = c_z_i;
-            assign skid_in_wire[ZR_BIT   +: W]      = c_z_r;
             assign skid_in_wire[ITER_BIT +: ITER_W] = c_iter;
             assign skid_in_wire[SEQ_BIT  +: SEQ_W]  = c_seq;
             
-            // Skid Buffer
-            skid_buffer_m#(
-                .INPUT_DATA( TOTAL_W ) 
+            // The Skid Buffer
+            skid_buffer_m #(
+                .INPUT_DATA(TOTAL_W) 
             ) skid_inst (
                 .clk(clk),
                 .rst_n(rst_n), 
                 .in_valid (raw_out_valid[i]),
-                .in_ready(raw_out_ready[i]), // ...
+                .in_ready(raw_out_ready[i]), 
                 .in_data  (skid_in_wire),
                 
-                .out_ready (core_out_ready[i]), // ...   
+                .out_ready (core_out_ready[i]),    
                 .out_valid(core_out_valid[i]),
                 .out_data (skid_out_wire)      
             );
@@ -158,8 +146,6 @@ module iter_core_array #(
             // Explicit combinational unpacking to flat arrays
             assign core_out_seq[(i*SEQ_W)  +: SEQ_W]   = skid_out_wire[SEQ_BIT  +: SEQ_W];
             assign core_out_iter[(i*ITER_W) +: ITER_W] = skid_out_wire[ITER_BIT +: ITER_W];
-            assign core_out_z_r[(i*W)      +: W]       = skid_out_wire[ZR_BIT   +: W];
-            assign core_out_z_i[(i*W)      +: W]       = skid_out_wire[ZI_BIT   +: W];
             assign core_out_escaped[i]                 = skid_out_wire[ESC_BIT];
             assign core_out_overflow[i]                = skid_out_wire[OVF_BIT];
         end
@@ -170,17 +156,15 @@ module iter_core_array #(
     wire               arb_ready;
     wire [SEQ_W-1:0]   arb_seq;
     wire [ITER_W-1:0]  arb_iter;
-    wire [W-1:0]       arb_z_r;
-    wire [W-1:0]       arb_z_i;
     wire               arb_escaped;
     wire               arb_overflow;
 
-    result_arbiter#(
+    result_arbiter #(
         .NUM_CORES(NUM_CORES),
         .W(W),
         .ITER_W(ITER_W),
         .SEQ_W(SEQ_W)
-    ) arbiter(
+    ) arbiter (
         .clk(clk),
         .rst_n(rst_n), 
         
@@ -188,8 +172,6 @@ module iter_core_array #(
         .core_out_ready(core_out_ready),
         .core_out_seq  (core_out_seq),
         .core_out_iter (core_out_iter),
-        .core_out_z_r  (core_out_z_r),
-        .core_out_z_i  (core_out_z_i),
         .core_out_escaped (core_out_escaped),
         .core_out_overflow(core_out_overflow),
         
@@ -198,8 +180,6 @@ module iter_core_array #(
         .rob_in_ready(arb_ready),
         .rob_in_iter_count(arb_iter),
         .rob_in_seq_num(arb_seq),
-        .rob_in_z_r(arb_z_r),
-        .rob_in_z_i(arb_z_i),
         .rob_in_escaped(arb_escaped),
         .rob_in_overflow(arb_overflow)
     );
@@ -211,14 +191,12 @@ module iter_core_array #(
     // Pack the arbiter output
     assign final_skid_in[OVF_BIT]            = arb_overflow;
     assign final_skid_in[ESC_BIT]            = arb_escaped;
-    assign final_skid_in[ZI_BIT   +: W]      = arb_z_i;
-    assign final_skid_in[ZR_BIT   +: W]      = arb_z_r;
     assign final_skid_in[ITER_BIT +: ITER_W] = arb_iter;
     assign final_skid_in[SEQ_BIT  +: SEQ_W]  = arb_seq;
 
     // The isolating skid buffer
-    skid_buffer_m#(
-        .INPUT_DATA( TOTAL_W ) 
+    skid_buffer_m #(
+        .INPUT_DATA(TOTAL_W) 
     ) final_skid (
         .clk(clk),
         .rst_n(rst_n), 
@@ -235,8 +213,6 @@ module iter_core_array #(
     // Unpack directly to the module outputs
     assign out_seq      = final_skid_out[SEQ_BIT  +: SEQ_W];
     assign out_iter     = final_skid_out[ITER_BIT +: ITER_W];
-    assign out_z_r      = final_skid_out[ZR_BIT   +: W];
-    assign out_z_i      = final_skid_out[ZI_BIT   +: W];
     assign out_escaped  = final_skid_out[ESC_BIT];
     assign out_overflow = final_skid_out[OVF_BIT];
 endmodule

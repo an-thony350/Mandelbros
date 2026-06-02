@@ -46,8 +46,6 @@ module iter_core #(
     output logic                 out_valid,
     output logic [SEQ_W-1:0]     out_seq,
     output logic [ITER_W-1:0]    out_iter,
-    output logic signed [W-1:0]  out_z_r,
-    output logic signed [W-1:0]  out_z_i,
     output logic                 out_escaped,
     output logic                 out_overflow
 );
@@ -226,8 +224,6 @@ module iter_core #(
     assign out_valid    = s6_done_c;
     assign out_seq      = s6_r.seq;
     assign out_iter     = s6_r.iter;
-    assign out_z_r      = s6_r.z_r;
-    assign out_z_i      = s6_r.z_i;
     assign out_escaped  = s6_escaped_r;
     assign out_overflow = s6_r.overflow;
 
@@ -365,6 +361,3 @@ module iter_core #(
     end
 
 endmodule
-
-
-
