@@ -14,7 +14,15 @@ Now our aim is to streamline this design, and then work on further extensions.
 
 ### CPU Baseline
 
-...
+This week we focused on cleanup to ensure our cpu baseline was more interactive friendly to resemble its usage as a set viewer like the implementation on our hardware v1 release.
+
+This mainly included separating our timing and main files to ensure that indepentant shell scripts could be run to allow for user-friendly testing and viewing.
+
+Moreover, we improved the latency of our design through the way in which squaring was done (actuall multipication of the same value twice rather than a `pow` instruction in C++).
+
+We also added the ability to actually view the sets in png files through the `std_image_write` library. This was not the only addition we made as wealso added the ability to zoom into the sets and produce different images depending on what your center value is.
+
+Next week, we are looking to have an actual HDMI output from the CPU baseline so that we can get more of a realistic end-to-end comparison between hardware and software
 
 ### PS
 
