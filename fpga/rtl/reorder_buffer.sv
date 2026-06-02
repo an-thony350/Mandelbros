@@ -35,8 +35,6 @@ module reorder_buffer#(
     // Inputs from iter_core
     input logic [ITER_W-1:0]  in_iter_count,
     input logic [SEQ_W-1:0]   in_seq_num,
-    input logic signed [W-1:0]in_z_r,
-    input logic signed [W-1:0]in_z_i,
     input logic               in_escaped,
     input logic               in_overflow,
     input logic                in_valid,
@@ -48,8 +46,6 @@ module reorder_buffer#(
 
     output logic [ITER_W-1:0]   out_iter_count,
     output logic [SEQ_W-1:0]    out_seq_num,
-    output logic signed [W-1:0] out_z_r,
-    output logic signed [W-1:0] out_z_i,
     output logic                out_escaped,
     output logic                out_overflow,
     output logic                out_valid,
@@ -74,8 +70,6 @@ logic [BUFFER_INDEX-1:0] re_index;
 
 (* ram_style = "block" *) logic [ITER_W-1:0]   buf_iter_count [BUFFER_SIZE-1:0];
 (* ram_style = "block" *) logic [SEQ_W-1:0]    buf_seq_num    [BUFFER_SIZE-1:0];
-(* ram_style = "block" *) logic signed [W-1:0] buf_z_r        [BUFFER_SIZE-1:0];
-(* ram_style = "block" *) logic signed [W-1:0] buf_z_i        [BUFFER_SIZE-1:0];
 (* ram_style = "block" *) logic                buf_escaped    [BUFFER_SIZE-1:0];
 (* ram_style = "block" *) logic                buf_overflow   [BUFFER_SIZE-1:0];
 
@@ -103,8 +97,6 @@ always_ff @(posedge clk) begin
     if (!rst_n) begin
         out_iter_count <= '0;
         out_seq_num    <= '0;
-        out_z_r        <= '0;
-        out_z_i        <= '0;
         out_escaped    <= 1'b0;
         out_overflow   <= 1'b0;
         out_sof        <= 1'b0;
@@ -114,8 +106,6 @@ always_ff @(posedge clk) begin
         out_valid      <= pre_valid;
         out_iter_count <= buf_iter_count[re_index];
         out_seq_num    <= buf_seq_num[re_index];
-        out_z_r        <= buf_z_r[re_index];
-        out_z_i        <= buf_z_i[re_index];
         out_escaped    <= buf_escaped[re_index];
         out_overflow   <= buf_overflow[re_index];
         out_sof        <= (pre_valid && (buf_seq_num[re_index] == 16'd0));
@@ -181,8 +171,6 @@ always_ff @(posedge clk) begin
         if(in_valid && out_ready) begin
             buf_iter_count[wr_index] <= in_iter_count;
             buf_seq_num[wr_index]    <= in_seq_num;
-            buf_z_r[wr_index]        <= in_z_r;
-            buf_z_i[wr_index]        <= in_z_i;
             buf_escaped[wr_index]    <= in_escaped;
             buf_overflow[wr_index]   <= in_overflow;
         end
