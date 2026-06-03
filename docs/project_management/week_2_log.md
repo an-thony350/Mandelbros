@@ -26,10 +26,18 @@ Next week, we are looking to have an actual HDMI output from the CPU baseline so
 
 ### PS
 
+This week focused on building the UI overlay for the HDMI output. The main deliverable was `ui_renderer.py`, a HUD renderer that draws an information overlay directly onto the framebuffer using NumPy and Pillow. The overlay displays the current fractal mode, centre coordinates, zoom level, max iterations, FPS, palette name, controller status, and a crosshair that will follow the joystick position.
+
+To allow development and testing without needing the full system running, a test script was written that loads a real fractal image as a background and feeds in a fake state object with hardcoded values. This allowed the layout, readability, and colour coding to be verified independently of the FPGA and controller. 
+
+Testing against multiple fractal backgrounds revealed that the initial panel opacity was too low, making text unreadable over bright areas of the fractal. This was fixed by increasing the panel darkness and adding a drop shadow to all text, ensuring the overlay is legible regardless of what is rendered underneath.
+
 ...
 
 
 ### Updates to Plan/Timeline and Evaluation
+
+`ui_renderer.py` is complete and tested locally. Next step is integration with the live app state so the overlay reads real values from the running system.
 
 ...
 
