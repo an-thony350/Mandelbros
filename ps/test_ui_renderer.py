@@ -18,7 +18,7 @@ class FakeState:
     joy_y        =  0.0
 
 # --- Load a local image as background ---
-bg = Image.open("/Users/junjiangwu/Desktop/test2.jpg").resize((1280, 720)).convert("RGB")
+bg = Image.open("[INSERT YOUR FILE PATH]").resize((1280, 720)).convert("RGB")
 framebuffer = np.array(bg)
 
 # --- Draw overlay ---
@@ -26,5 +26,5 @@ renderer = UIRenderer(width=1280, height=720)
 renderer.draw(framebuffer, FakeState())
 
 # --- Save result ---
-Image.fromarray(framebuffer).save("/Users/junjiangwu/Desktop/overlay_test.png")
+Image.fromarray(framebuffer).save("[INSERT YOUR FILE PATH]")
 print("Done — check overlay_test.png on your Desktop")
