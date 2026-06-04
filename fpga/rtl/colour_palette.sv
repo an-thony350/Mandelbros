@@ -21,6 +21,7 @@ module colour_palette #(
     parameter int ITER_W = 16,
     parameter int SEQ_W = 20,
     parameter int PALETTE_BITS = 10
+
 )(
     input logic clk,
     input logic rst_n,
@@ -95,16 +96,12 @@ module colour_palette #(
         begin
             idx = iter_count[PALETTE_BITS-1:0];
 
-            if (overflow) begin
-                // Debug colour for arithmetic overflow.
-                colour_for_pixel = 24'hFF_00_FF; // magenta
-            end
-            else if (!escaped) begin
-                // inside set.
-                colour_for_pixel = 24'h00_00_00; // black
+            if (overflow || escaped) begin
+                colour_for_pixel = palette_lookup(idx);
             end
             else begin
-                colour_for_pixel = palette_lookup(idx);
+                // inside set.
+                colour_for_pixel = 24'h00_00_00; // black
             end
         end
     endfunction
@@ -147,3 +144,4 @@ module colour_palette #(
     end
 
 endmodule
+
