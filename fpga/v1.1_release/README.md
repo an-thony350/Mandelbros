@@ -4,6 +4,8 @@ In order to rebuild this vivado project, we have provided the relevant files and
 
 **Please note that this design requires Vivado 2023.2**
 
+The notebook PS used for this release can be found in `Mandelbros/notebooks/fractalscope_v1.1.ipynb`
+
 ### Instructions
 
 1. Clone this repository using the following command: `git clone --recursive https://github.com/an-thony350/Mandelbros.git` **Please note the repository path**
