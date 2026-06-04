@@ -8,7 +8,9 @@ The final parts of this week were dedicated to preparing for the presentation on
 
 We have successfully got a full working pipeline (29/05 @04:14), as well as build instructions in the repo. 
 
-This essentially came through major debugging of the pipeline through updates of the testbenches, and interaction with the PS by adding more AXI GPIO interfaces to read signals directly. We could catch small issues with reset wiring, and verify output was currect. 
+This essentially came through major debugging of the pipeline through updates of the testbenches, and interaction with the PS by adding more AXI GPIO interfaces to read signals directly. We could catch small issues with reset wiring, and verify output was currect.
+
+As well as having a working demo on screen, we also managed to start out timing comparisons between hardware and software, although our CPU baseline design doesn't include a HDMI output and thus it could be argued that a full end-to-end design cannot be measured, we still measured our hardware latency and achieved a value of ~ 0.5s. We plan to improve this latency value through double buffering.
 
 Now our aim is to streamline this design, and then work on further extensions. 
 
