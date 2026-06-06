@@ -73,6 +73,8 @@ module pixel_write_engine #(
     localparam logic [2:0] AXI_SIZE_4B    = 3'b010;
     localparam logic [1:0] AXI_RESP_OKAY  = 2'b00;
     localparam logic [31:0] FRAME_PIXELS_32 = FRAME_PIXELS;
+    localparam logic [31:0] SKIPPED_PIXELS = 2 * (352 * 160); // UI blocks
+    localparam logic [31:0] ACTIVE_PIXELS = FRAME_PIXELS_32 - SKIPPED_PIXELS;
 
     typedef enum logic [2:0] {
         ST_IDLE,
@@ -93,10 +95,10 @@ module pixel_write_engine #(
     logic [31:0]    target_pixels;
     always_comb begin
         case(in_scale)
-            4'd8:   target_pixels = FRAME_PIXELS_32 >> 6;
-            4'd4:   target_pixels = FRAME_PIXELS_32 >> 4;
-            4'd2:   target_pixels = FRAME_PIXELS_32 >> 2;
-            default: target_pixels = FRAME_PIXELS_32;
+            4'd8:   target_pixels = ACTIVE_PIXELS >> 6;
+            4'd4:   target_pixels = ACTIVE_PIXELS >> 4;
+            4'd2:   target_pixels = ACTIVE_PIXELS >> 2;
+            default: target_pixels = ACTIVE_PIXELS;
             endcase
         end
 

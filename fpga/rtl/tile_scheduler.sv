@@ -62,8 +62,10 @@ module tile_scheduler#(
     localparam int CORE_IDX_W = (NUM_CORES <= 1) ? 1 : $clog2(NUM_CORES);
     localparam int X_W        = (X_RES <= 1) ? 1 : $clog2(X_RES);
     localparam int Y_W        = (Y_RES <= 1) ? 1 : $clog2(Y_RES);
+    localparam int SKIP_W     =  352; // chosen pixel width of ui
+    localparam int SKIP_H     =  160; // chosen pixel height of ui
 
-    localparam logic [MODE_W-1:0] MODE_JULIA = 3'd1;
+    localparam logic [MODE_W-1:0] MODE_JULIA = 3'd1; 
 
     // Internal signals
     logic [CORE_IDX_W-1:0] chosen_core;
@@ -84,6 +86,8 @@ module tile_scheduler#(
     logic [4:0]          x_tile; // Chosen to be 32 as it divides 1280 exactly into 40 tiles across
     logic [3:0]          y_tile; // Chosen to be 16 as it divides 720 exactly into 45 tiles
     logic [INDEX_W-1:0]  pixel_index;
+    logic [X_W-1:0]      next_x;
+    logic [Y_W-1:0]      next_y;
 
     logic [X_W-1:0]     draw_abs_x;
     logic [Y_W-1:0]     draw_abs_y;
@@ -106,7 +110,34 @@ module tile_scheduler#(
 
     assign cur_c_r = x_min + ($signed({1'b0, math_abs_x}) * x_jump);
     assign cur_c_i = y_min + ($signed({1'b0, math_abs_y}) * y_jump);
-
+    
+    // tile jump logic, allows for skips w/ dirty rectangle
+    
+    always_comb begin
+        if(x == X_RES - 32) begin
+            next_x = 0;
+            next_y = y + 16;
+        end
+        else begin
+            next_x = x + 32;
+            next_y = y;
+        end
+        
+        if(next_y < SKIP_H) begin
+            if(next_x < SKIP_W) begin
+                next_x = SKIP_W;
+            end
+            else if(next_x >= X_RES - SKIP_W) begin
+                next_y = next_y + 16;
+                if(next_y < SKIP_H) begin
+                    next_x = SKIP_W;
+                end 
+                else begin
+                    next_x = 0;
+                end
+            end    
+        end 
+    end
     // Core selection logic: Find the first available core
     assign available_core = |in_ready;
     assign dispatch       = rst_n && available_core && !frame_done;
@@ -158,7 +189,7 @@ module tile_scheduler#(
     // Tile & Pixel tracker - also updated pixel index
     always_ff @(posedge clk) begin
         if(!rst_n) begin
-            x           <= '0;
+            x           <= SKIP_W;
             y           <= '0;
             x_tile      <= '0;
             y_tile      <= '0;
@@ -173,15 +204,9 @@ module tile_scheduler#(
                 x_tile <= 0;
                 if(y_tile == 16 - in_scale) begin
                     y_tile <= 0;
-
-                    // Next tile logic
-                    if(x == X_RES-32) begin
-                        x <= 0;
-                        y <= y + 16;
-                    end
-                    else begin
-                        x <= x + 32;
-                    end
+                    
+                    x <= next_x;
+                    y <= next_y;
 
                 end
                 else begin
