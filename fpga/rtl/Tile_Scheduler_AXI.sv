@@ -522,6 +522,7 @@ module tile_scheduler_AXI #
         .jul_c_i(slv_reg5[25:0]),
         .in_max_iter(slv_reg6[15:0]), // Note that this is done to save space
         .in_mode(slv_reg6[18:16]),
+        .in_scale(slv_reg7[7:4]),
         
         // Other inputs
         

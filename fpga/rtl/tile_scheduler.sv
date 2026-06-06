@@ -35,6 +35,7 @@ module tile_scheduler#(
     input logic signed [W-1:0] x_min,
     input logic signed [W-1:0] y_min,
     output logic               last_pixel,
+    input logic        [3:0]   in_scale,
 
     // Parameters for Julia set (ignored for Mandelbrot)
     input logic signed [W-1:0] jul_c_r,
@@ -61,8 +62,6 @@ module tile_scheduler#(
     localparam int CORE_IDX_W = (NUM_CORES <= 1) ? 1 : $clog2(NUM_CORES);
     localparam int X_W        = (X_RES <= 1) ? 1 : $clog2(X_RES);
     localparam int Y_W        = (Y_RES <= 1) ? 1 : $clog2(Y_RES);
-    localparam int SCALE      = 8; // hardcoded, but can be changed
-    localparam int HALF_SCALE = SCALE / 2;
 
     localparam logic [MODE_W-1:0] MODE_JULIA = 3'd1;
 
@@ -90,6 +89,9 @@ module tile_scheduler#(
     logic [Y_W-1:0]     draw_abs_y;
     logic [X_W-1:0]     math_abs_x;
     logic [Y_W-1:0]     math_abs_y;
+    
+    logic [3:0]         half_scale;
+    assign half_scale = in_scale >> 1;
 
 
     // abs pixels and math coord combinational logic
@@ -99,8 +101,8 @@ module tile_scheduler#(
 
     assign pixel_index = (draw_abs_y*X_RES) + draw_abs_x;
 
-    assign math_abs_x = draw_abs_x + HALF_SCALE;
-    assign math_abs_y = draw_abs_y + HALF_SCALE;
+    assign math_abs_x = draw_abs_x + half_scale;
+    assign math_abs_y = draw_abs_y + half_scale;
 
     assign cur_c_r = x_min + ($signed({1'b0, math_abs_x}) * x_jump);
     assign cur_c_i = y_min + ($signed({1'b0, math_abs_y}) * y_jump);
@@ -163,13 +165,13 @@ module tile_scheduler#(
             frame_done  <= 1'b0;
         end
         else if (dispatch) begin
-            if (x == (X_RES-32) && y == (Y_RES-16) && x_tile == 31 && y_tile == 15) begin
+            if (x == (X_RES-32) && y == (Y_RES-16) && x_tile == (32-in_scale) && y_tile == (16-in_scale)) begin
                 frame_done <= 1'b1;
             end
             // First tile search
-            if(x_tile == 32 - SCALE) begin
+            if(x_tile == 32 - in_scale) begin
                 x_tile <= 0;
-                if(y_tile == 16 - SCALE) begin
+                if(y_tile == 16 - in_scale) begin
                     y_tile <= 0;
 
                     // Next tile logic
@@ -183,11 +185,11 @@ module tile_scheduler#(
 
                 end
                 else begin
-                    y_tile <= y_tile + SCALE;
+                    y_tile <= y_tile + in_scale;
                 end
             end
             else begin
-                x_tile <= x_tile + SCALE;
+                x_tile <= x_tile + in_scale;
             end
         end
     end
