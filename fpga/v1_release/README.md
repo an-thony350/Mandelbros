@@ -17,7 +17,6 @@ git sparse-scheckout init --cone
 git sparse-checkout set fpga/v1_release
 git checkout main
 git submodule update --init --recursive fpga/v1_release/ext/vivado-library
-
 ```
 **Please note the repository path**
 

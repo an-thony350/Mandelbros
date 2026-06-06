@@ -1,6 +1,6 @@
 # v2 Release Instructions
 
-In order to rebuild this vivado project, we have provided the relevant files and the instructions on building our v1 project design below:
+In order to rebuild this vivado project, we have provided the relevant files and the instructions on building our v2 project design below:
 
 **Please note that this design requires Vivado 2023.2**
 
@@ -17,7 +17,6 @@ git sparse-scheckout init --cone
 git sparse-checkout set fpga/v2_release
 git checkout main
 git submodule update --init --recursive fpga/v2_release/ext/vivado-library
-
 ```
 **Please note the repository path**
 
