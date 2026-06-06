@@ -12,18 +12,25 @@
 // Description: BRAM-backed colour palette for converting iteration counts to RGB
 //
 // Notes:
-//   - The internal ROM/BRAM lookup adds one cycle of latency, but the valid/ready
-//     pipeline preserves metadata alignment.
+//   - palette_scale maps iter_count across the full palette range.
+//   - A scale value of zero falls back to the old direct-index behaviour.
+//   - The scaling stage adds one extra cycle of latency, but valid/ready
+//     preserves metadata alignment.
 //////////////////////////////////////////////////////////////////////////////////
 
 module colour_palette #(
-    parameter int W      = 26,
-    parameter int ITER_W = 16,
-    parameter int SEQ_W  = 20,
-    parameter int PALETTE_BITS = 10
+    parameter int W                  = 26,
+    parameter int ITER_W             = 16,
+    parameter int SEQ_W              = 20,
+    parameter int PALETTE_BITS       = 10,
+    parameter int PALETTE_SCALE_W    = 32,
+    parameter int PALETTE_SCALE_FRAC = 16
 )(
     input logic clk,
     input logic rst_n,
+
+    // Control
+    input  logic [PALETTE_SCALE_W-1:0] palette_scale,
 
     // Input from reorder buffer / iter stream
     input  logic                in_valid,
@@ -48,30 +55,66 @@ module colour_palette #(
     output logic                out_eol
 );
 
-    localparam int PALETTE_SIZE = 1 << PALETTE_BITS;
+    localparam int PALETTE_SIZE    = 1 << PALETTE_BITS;
+    localparam int SCALE_PRODUCT_W = ITER_W + PALETTE_SCALE_W;
 
-    // combinational palette_lookup() function.
+    localparam logic [PALETTE_BITS-1:0] PALETTE_MAX_IDX = {PALETTE_BITS{1'b1}};
+
     (* rom_style = "block", ram_style = "block" *)
     logic [23:0] palette_mem [0:PALETTE_SIZE-1];
 
-    // Stage between BRAM lookup and output register.
-    logic                rd_valid;
-    logic [SEQ_W-1:0]    rd_seq_num;
-    logic                rd_escaped;
-    logic                rd_overflow;
-    logic                rd_sof;
-    logic                rd_eol;
-    logic [23:0]         rd_rgb;
+    // Stage 0: scaled palette index.
+    logic                         idx_valid;
+    logic [SEQ_W-1:0]             idx_seq_num;
+    logic                         idx_escaped;
+    logic                         idx_overflow;
+    logic                         idx_sof;
+    logic                         idx_eol;
+    logic [PALETTE_BITS-1:0]      idx_palette_idx;
 
-    logic                out_advance;
-    logic [23:0]         selected_rgb;
+    // Stage 1: BRAM lookup result.
+    logic                         rd_valid;
+    logic [SEQ_W-1:0]             rd_seq_num;
+    logic                         rd_escaped;
+    logic                         rd_overflow;
+    logic                         rd_sof;
+    logic                         rd_eol;
+    logic [23:0]                  rd_rgb;
+
+    logic                         idx_advance;
+    logic                         rd_advance;
+    logic                         out_advance;
+    logic [23:0]                  selected_rgb;
 
     assign out_advance = !out_valid || out_ready;
+    assign rd_advance  = !rd_valid  || out_advance;
+    assign idx_advance = !idx_valid || rd_advance;
 
-    // The pipeline has two internal slots: rd_* and out_*.
-    // We can accept a new input if the rd stage is empty, or if the rd stage
-    // will move forward into the output stage on this cycle.
-    assign palette_ready = !rd_valid || out_advance;
+    assign palette_ready = idx_advance;
+
+    function automatic logic [PALETTE_BITS-1:0] scaled_palette_index(
+        input logic [ITER_W-1:0]          iter_count,
+        input logic [PALETTE_SCALE_W-1:0] scale
+    );
+        logic [SCALE_PRODUCT_W-1:0] product;
+        logic [SCALE_PRODUCT_W-1:0] scaled;
+        begin
+            if (scale == '0) begin
+                scaled_palette_index = iter_count[PALETTE_BITS-1:0];
+            end
+            else begin
+                product = iter_count * scale;
+                scaled  = product >> PALETTE_SCALE_FRAC;
+
+                if (|scaled[SCALE_PRODUCT_W-1:PALETTE_BITS]) begin
+                    scaled_palette_index = PALETTE_MAX_IDX;
+                end
+                else begin
+                    scaled_palette_index = scaled[PALETTE_BITS-1:0];
+                end
+            end
+        end
+    endfunction
 
     // Kept here as documentation of the exact intended palette mapping.
     // The .mem file generated for PALETTE_BITS=10 matches this function.
@@ -101,22 +144,15 @@ module colour_palette #(
     initial begin : init_palette
         integer i;
 
-        // Safe fallback for simulation/synthesis if the memory file is not found
-        // or if this module is used with a different PALETTE_BITS value.
         for (i = 0; i < PALETTE_SIZE; i = i + 1) begin
             palette_mem[i] = palette_lookup_model(i[PALETTE_BITS-1:0]);
         end
 
-        // For the current FractalScope build this file should be added to the
-        // Vivado project alongside this source file.
         if (PALETTE_BITS == 10) begin
             $readmemh("palette_rainbow_full_1024.mem", palette_mem);
         end
     end
 
-    // Equivalent to the known-working combinational version:
-    //   if (overflow || escaped) colour = palette(index)
-    //   else colour = black
     always_comb begin
         if (rd_overflow || rd_escaped) begin
             selected_rgb = rd_rgb;
@@ -128,21 +164,29 @@ module colour_palette #(
 
     always_ff @(posedge clk) begin
         if (!rst_n) begin
-            rd_valid    <= 1'b0;
-            rd_seq_num  <= '0;
-            rd_escaped  <= 1'b0;
-            rd_overflow <= 1'b0;
-            rd_sof      <= 1'b0;
-            rd_eol      <= 1'b0;
-            rd_rgb      <= '0;
+            idx_valid       <= 1'b0;
+            idx_seq_num     <= '0;
+            idx_escaped     <= 1'b0;
+            idx_overflow    <= 1'b0;
+            idx_sof         <= 1'b0;
+            idx_eol         <= 1'b0;
+            idx_palette_idx <= '0;
 
-            out_valid   <= 1'b0;
-            out_seq_num <= '0;
-            out_r       <= '0;
-            out_g       <= '0;
-            out_b       <= '0;
-            out_sof     <= 1'b0;
-            out_eol     <= 1'b0;
+            rd_valid        <= 1'b0;
+            rd_seq_num      <= '0;
+            rd_escaped      <= 1'b0;
+            rd_overflow     <= 1'b0;
+            rd_sof          <= 1'b0;
+            rd_eol          <= 1'b0;
+            rd_rgb          <= '0;
+
+            out_valid       <= 1'b0;
+            out_seq_num     <= '0;
+            out_r           <= '0;
+            out_g           <= '0;
+            out_b           <= '0;
+            out_sof         <= 1'b0;
+            out_eol         <= 1'b0;
         end
         else begin
             if (out_advance) begin
@@ -162,20 +206,37 @@ module colour_palette #(
                 end
             end
 
-            if (palette_ready) begin
-                rd_valid <= in_valid;
+            if (rd_advance) begin
+                rd_valid <= idx_valid;
 
-                if (in_valid) begin
-                    rd_seq_num  <= in_seq_num;
-                    rd_escaped  <= in_escaped;
-                    rd_overflow <= in_overflow;
-                    rd_sof      <= in_sof;
-                    rd_eol      <= in_eol;
-                    rd_rgb      <= palette_mem[in_iter_count[PALETTE_BITS-1:0]];
+                if (idx_valid) begin
+                    rd_seq_num  <= idx_seq_num;
+                    rd_escaped  <= idx_escaped;
+                    rd_overflow <= idx_overflow;
+                    rd_sof      <= idx_sof;
+                    rd_eol      <= idx_eol;
+                    rd_rgb      <= palette_mem[idx_palette_idx];
                 end
                 else begin
                     rd_sof <= 1'b0;
                     rd_eol <= 1'b0;
+                end
+            end
+
+            if (idx_advance) begin
+                idx_valid <= in_valid;
+
+                if (in_valid) begin
+                    idx_seq_num     <= in_seq_num;
+                    idx_escaped     <= in_escaped;
+                    idx_overflow    <= in_overflow;
+                    idx_sof         <= in_sof;
+                    idx_eol         <= in_eol;
+                    idx_palette_idx <= scaled_palette_index(in_iter_count, palette_scale);
+                end
+                else begin
+                    idx_sof <= 1'b0;
+                    idx_eol <= 1'b0;
                 end
             end
         end
