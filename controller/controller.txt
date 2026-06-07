@@ -1,1 +1,7 @@
-all firmware, KiCad project files, etc. go here
+Mode Button - Iterates through the 4 different modes. 
+Select - Creates save point (point of interest).
+Next - Goes to next save point. 
+Back - Goes to previous save point 
+Reset - Removes all saved points. Resets image to mandlebrot, coords (0,0), x step 3, maxiter 64.
+Joystick push - Goes to (0,0) at current zoom and iteration no.
+(Pallette - Iterates through colour pallete options - not yet implemented)
