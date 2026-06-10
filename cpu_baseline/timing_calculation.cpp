@@ -93,5 +93,6 @@ int main(){
     std::cout << set_lookup() << " set chosen... \n";
     double time = sim_choice();
 
-    std::cout << "Average time for " << set_lookup() << " set: " << time << " seconds.\n";
+    // not required when testing end-to-end latency from the python script
+    // std::cout << "Average time for " << set_lookup() << " set: " << time << " seconds.\n";
 }

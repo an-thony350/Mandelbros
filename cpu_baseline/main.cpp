@@ -5,14 +5,23 @@
 // to be worked on
 
 int main(){
+    choose_mode();
     choose_set();
     std::cout << set_lookup() << " set chosen... \n";
 
-    std::this_thread::sleep_for(std::chrono::seconds(1));
+    if(chosen_mode){
+        double time = sim_choice();
+        std::cout << "Average time for " << set_lookup() << " set calculation: " << time << std::endl;
+    }
+    else{
+        std::this_thread::sleep_for(std::chrono::seconds(1));
 
-    std::cout << "Generating image..." << std::endl;
+        std::cout << "Generating image..." << std::endl;
 
-    Generate_Image();
+        Generate_Image();
+    }
+
+    auto Start_png_gen = std::chrono::high_resolution_clock::now();
 
     std::string png = set_lookup() + ".png";
     
@@ -21,5 +30,12 @@ int main(){
     }
     else {
         std::cerr << "Failed to save the image." << std::endl;
+    }
+
+    auto End_png_gen = std::chrono::high_resolution_clock::now();
+
+    auto Png_Time = std::chrono::duration<double>(End_png_gen - Start_png_gen);
+    if(chosen_mode){
+        std::cout << "Time to produce png image: " << Png_Time.count() << std::endl;
     }
 }

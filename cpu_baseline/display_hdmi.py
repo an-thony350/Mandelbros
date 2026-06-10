@@ -26,6 +26,7 @@ import sys
 import os
 import shutil
 import platform
+import time
 
 # ── Step 0: Parse arguments
 
@@ -111,6 +112,8 @@ print("-" * 50)
 
 SET_NAMES = ["Mandelbrot", "Julia", "Burning Ship", "Tricorn"]
 detected_png = None
+threaded_time = None
+png_time = None
 
 proc = subprocess.Popen(
     [output_bin],
@@ -130,8 +133,12 @@ for line in proc.stdout:
     for name in SET_NAMES:
         if name in line and "set chosen" in line:
             detected_png = os.path.join(script_dir, name + ".png")
+    
+    if "Average time" in line:
+        threaded_time = os.path.join(script_dir)
 
 proc.wait()
+e2e_start_0 = time.time()
 print("-" * 50)
 
 if proc.returncode != 0:
@@ -139,7 +146,6 @@ if proc.returncode != 0:
     sys.exit(1)
 
 # ── Step 4: Find the PNG
-
 if detected_png is None or not os.path.exists(detected_png):
     # Fallback: find the most recently modified PNG in the folder
     pngs = [
@@ -230,6 +236,7 @@ screen.fill((0, 0, 0))
 screen.blit(image, (x_off, y_off))
 pygame.display.flip()
 
+e2e_end_0 = time.time()
 print("Image displayed. Press Q or Escape to close.")
 
 # Event loop — keep window open until user closes it
@@ -259,3 +266,7 @@ while running:
 
 pygame.quit()
 print("Display closed.")
+e2e_time = (e2e_end_0 - e2e_start_0)
+
+print(f"End of C++ -> HDMI time: {e2e_time} seconds")
+print(threaded_time)

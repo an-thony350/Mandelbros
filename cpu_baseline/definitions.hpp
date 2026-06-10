@@ -10,7 +10,7 @@
 
 #define ROW_NUM 720
 #define COL_NUM 1280
-#define TOTAL_LOOPS 20
+#define TOTAL_LOOPS 100
 #define ITER_NUM 256
 #define MAIN_NUM_THREADS 16
 #define ASPECT_RATIO 3.5
