@@ -64,7 +64,6 @@ module result_arbiter #(
     logic [CORE_IDX_W-1:0] selected_idx;
     logic                  selected_valid;
 
-    // Unpack flat 1D arrays into 2D arrays using constant indexing
     logic [SEQ_W-1:0]    seq_2d  [NUM_CORES];
     logic [ITER_W-1:0]   iter_2d [NUM_CORES];
 
@@ -121,7 +120,6 @@ module result_arbiter #(
         end
     end
 
-    // index the 2D arrays 
     always_comb begin
         rob_in_valid      = selected_valid;
 
@@ -138,7 +136,6 @@ module result_arbiter #(
         end
     end
 
-    // Explicit assignment to prevent synthesizer loops
     always_comb begin
         for (int i = 0; i < NUM_CORES; i++) begin
             if (selected_valid && (selected_idx == i)) begin

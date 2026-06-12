@@ -17,7 +17,7 @@
 // Dependencies: None
 //
 // Additional Comments: 
-////////////////////////////////////////////////////////////////////////////////// 
+//////////////////////////////////////////////////////////////////////////////////
 
 module iter_core #(
     parameter int W       = 26,    
@@ -71,11 +71,15 @@ module iter_core #(
         logic signed [W-1:0]   z_r;
         logic signed [W-1:0]   z_i;
         logic                  overflow;  // sticky over this pixel's life
+        logic signed [W-1:0]   z_old_r;
+        logic signed [W-1:0]   z_old_i;
+        logic [ITER_W-1:0]     p_count;
+        logic [ITER_W-1:0]     p_limit;
     } slot_t;
 
     // Pipeline registers
+    
     slot_t s0_r;
-
     slot_t s1_payload_r;
     logic signed [W-1:0] s1_zm_r, s1_zm_i;
 
@@ -148,6 +152,8 @@ module iter_core #(
     
     logic signed [W:0] s4_zr2_minus_zi2_c;
     logic signed [W:0] s4_mag_sq_c;
+    
+    
 
     always_comb begin
 
@@ -199,12 +205,17 @@ module iter_core #(
     logic                s5_reached_max_c;
     logic signed [W-1:0] s5_z_r_new_trunc_c, s5_z_i_new_trunc_c;
 
+    logic                s5_is_period_c;
+    
     always_comb begin
         // Sticky overflow forces escape (so the pixel exits)
         s5_escaped_c     = s5_ovf_r
                          | ($signed(s5_mag_sq_r) > $signed({1'b0, ESCAPE_THRESH_Q422}));
+                         
+        s5_is_period_c = (s5_z_r_new_trunc_c[W-1:8] == s5_payload_r.z_old_r[W-1:8]) && 
+                         (s5_z_i_new_trunc_c[W-1:8] == s5_payload_r.z_old_i[W-1:8]);                     
 
-        s5_reached_max_c = ((s5_payload_r.iter + 1'b1) == s5_payload_r.max_iter);
+        s5_reached_max_c = ((s5_payload_r.iter + 1'b1) == s5_payload_r.max_iter) | s5_is_period_c;
 
         s5_z_r_new_trunc_c = s5_z_r_new_full_r[W-1:0];
         s5_z_i_new_trunc_c = s5_z_i_new_full_r[W-1:0];
@@ -248,6 +259,10 @@ module iter_core #(
                 s0_next_c.z_r      = in_z0_r;
                 s0_next_c.z_i      = in_z0_i;
                 s0_next_c.overflow = 1'b0;
+                s0_next_c.z_old_r  = in_z0_r;
+                s0_next_c.z_old_i  = in_z0_i;
+                s0_next_c.p_count  = '0;
+                s0_next_c.p_limit  = 16'd2;
             end
             // else: bubble (already '0 from default)
         end
@@ -263,6 +278,10 @@ module iter_core #(
             s0_next_c.z_r      = s6_r.z_r;      // already updated at s6
             s0_next_c.z_i      = s6_r.z_i;
             s0_next_c.overflow = s6_r.overflow;
+            s0_next_c.z_old_r  = s6_r.z_old_r;
+            s0_next_c.z_old_i  = s6_r.z_old_i;
+            s0_next_c.p_count  = s6_r.p_count;
+            s0_next_c.p_limit  = s6_r.p_limit;
         end
     end
 
@@ -347,13 +366,24 @@ module iter_core #(
                 s6_r.z_i  <= s5_payload_r.z_i;
             end
             else begin
-                // Not escaped: commit one more iteration.
                 s6_r.iter <= s5_payload_r.iter + 1'b1;
                 s6_r.z_r  <= s5_z_r_new_trunc_c;
                 s6_r.z_i  <= s5_z_i_new_trunc_c;
+                
+                if (s5_payload_r.p_count == s5_payload_r.p_limit) begin
+                    s6_r.z_old_r <= s5_z_r_new_trunc_c;
+                    s6_r.z_old_i <= s5_z_i_new_trunc_c;
+                    s6_r.p_count <= '0;
+                    s6_r.p_limit <= s5_payload_r.p_limit << 1;
+                end else begin
+                    s6_r.z_old_r <= s5_payload_r.z_old_r;
+                    s6_r.z_old_i <= s5_payload_r.z_old_i;
+                    s6_r.p_count <= s5_payload_r.p_count + 1'b1;
+                    s6_r.p_limit <= s5_payload_r.p_limit;
+                end
             end
 
-            s6_r.overflow    <= s5_ovf_r | s5_combine_ovf_r;
+            s6_r.overflow    <= s5_ovf_r | (~s5_escaped_c & s5_combine_ovf_r);
             s6_escaped_r     <= s5_escaped_c;
             s6_reached_max_r <= ~s5_escaped_c & s5_reached_max_c;
         end
@@ -361,3 +391,6 @@ module iter_core #(
     end
 
 endmodule
+
+
+

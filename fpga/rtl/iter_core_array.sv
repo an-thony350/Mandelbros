@@ -1,22 +1,4 @@
 `timescale 1ns / 1ps
-//////////////////////////////////////////////////////////////////////////////////
-// Company: Mandelbros
-// Engineers: Anthony Bartlett & Denzil Erza-Essien
-// 
-// Create Date: 28.05.2026
-// Design Name: Iteration Core Array
-// Module Name: iter_core_array
-// Project Name: FractalScope
-// Target Devices: PYNQ-Z1
-// Tool Versions: Vivado 2023.2
-// Description: Array of iteration cores for parallel Mandelbrot/Julia set 
-//              computation, with an integrated result arbiter and final pipeline 
-//              isolation skid buffer to ensure timing closure.
-// 
-// Dependencies: iter_core.sv, skid_buffer_m.sv, result_arbiter.sv
-//
-// Additional Comments: None
-////////////////////////////////////////////////////////////////////////////////// 
 
 (* keep_hierarchy = "yes" *)
 module iter_core_array #(
@@ -55,7 +37,7 @@ module iter_core_array #(
     output wire               out_overflow
 );
 
-    // Calculate the exact bit offsets
+    // By calculating the exact bit offsets, we avoid structs entirely.
     localparam int OVF_BIT  = 0;
     localparam int ESC_BIT  = 1;
     localparam int ITER_BIT = 2;
@@ -78,7 +60,7 @@ module iter_core_array #(
     generate
         for (genvar i = 0; i < NUM_CORES; i++) begin : core_gen
             
-            // Local wires
+            // Local wires exclusively for THIS specific core
             wire [SEQ_W-1:0]  c_seq;
             wire [ITER_W-1:0] c_iter;
             wire              c_esc;
@@ -122,7 +104,7 @@ module iter_core_array #(
                 .out_overflow( c_ovf )
             );
             
-            // Explicit combinational packing into a single wide wire
+            // EXPLICIT COMBINATIONAL PACKING
             assign skid_in_wire[OVF_BIT]            = c_ovf;
             assign skid_in_wire[ESC_BIT]            = c_esc;
             assign skid_in_wire[ITER_BIT +: ITER_W] = c_iter;
@@ -143,7 +125,6 @@ module iter_core_array #(
                 .out_data (skid_out_wire)      
             );
             
-            // Explicit combinational unpacking to flat arrays
             assign core_out_seq[(i*SEQ_W)  +: SEQ_W]   = skid_out_wire[SEQ_BIT  +: SEQ_W];
             assign core_out_iter[(i*ITER_W) +: ITER_W] = skid_out_wire[ITER_BIT +: ITER_W];
             assign core_out_escaped[i]                 = skid_out_wire[ESC_BIT];
@@ -151,7 +132,6 @@ module iter_core_array #(
         end
     endgenerate
     
-    // Result Arbiter
     wire               arb_valid;
     wire               arb_ready;
     wire [SEQ_W-1:0]   arb_seq;
@@ -184,7 +164,6 @@ module iter_core_array #(
         .rob_in_overflow(arb_overflow)
     );
 
-    // Final pipeline isolation
     wire [TOTAL_W-1:0] final_skid_in;
     wire [TOTAL_W-1:0] final_skid_out;
 

@@ -233,7 +233,6 @@ module pixel_write_engine_AXI #(
                             writer_start_pulse      <= S_AXI_WDATA[0];
                             slv_reg0_control[1]     <= S_AXI_WDATA[1];
                             writer_soft_reset_pulse <= S_AXI_WDATA[2];
-                            slv_reg0_control[7:4]   <= S_AXI_WDATA[7:4];
                         end
                     end
 
@@ -389,7 +388,6 @@ module pixel_write_engine_AXI #(
         .pixels_accepted(writer_pixels_accepted),
         .pixels_written(writer_pixels_written),
         .write_errors(writer_write_errors),
-        .in_scale(slv_reg0_control[7:4]),
 
         .m_axi_awaddr(M_AXI_AWADDR),
         .m_axi_awlen(M_AXI_AWLEN),
