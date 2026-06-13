@@ -42,6 +42,13 @@ module colour_palette #(
     input  logic                in_overflow,
     input  logic                in_sof,
     input  logic                in_eol,
+    
+    // Inputs from tile_scheduler
+    input  logic                tile_fill_valid,
+    output logic                tile_fill_ready,
+    input  logic [SEQ_W-1:0]    tile_fill_seq_num,
+    input  logic [ITER_W-1:0]   tile_fill_iter_count,
+    input  logic                tile_fill_escaped,
 
     // Output to framebuffer / pixel writer
     output logic                out_valid,
@@ -85,12 +92,36 @@ module colour_palette #(
     logic                         rd_advance;
     logic                         out_advance;
     logic [23:0]                  selected_rgb;
+    
+    // Mux internal regiters allowing for fill
+    logic                         mux_valid;
+    logic [SEQ_W-1:0]             mux_seq_num;
+    logic [ITER_W-1:0]            mux_iter_count;
+    logic                         mux_escaped;
+    logic                         mux_overflow;
+    logic                         mux_sof;
+    logic                         mux_eol;
+    
+    // Combinational MUX logic
+    
+    assign mux_valid        = tile_fill_valid | in_valid;
+    assign tile_fill_ready  = idx_advance;
+    
+    assign mux_seq_num      = tile_fill_valid ? tile_fill_seq_num       : in_seq_num;
+    assign mux_iter_count   = tile_fill_valid ? tile_fill_iter_count    : in_iter_count;
+    assign mux_escaped      = tile_fill_valid ? tile_fill_escaped       : in_escaped;
+    assign mux_overflow     = tile_fill_valid ? 1'b0                    : in_overflow;
+    assign mux_sof          = tile_fill_valid ? 1'b0                    : in_sof;
+    assign mux_eol          = tile_fill_valid ? 1'b0                    : in_eol;
 
+
+    // Combinational pipeline compute logic
+    
     assign out_advance = !out_valid || out_ready;
     assign rd_advance  = !rd_valid  || out_advance;
     assign idx_advance = !idx_valid || rd_advance;
 
-    assign palette_ready = idx_advance;
+    assign palette_ready = idx_advance & ~tile_fill_valid;
 
     function automatic logic [PALETTE_BITS-1:0] scaled_palette_index(
         input logic [ITER_W-1:0]          iter_count,
@@ -224,15 +255,15 @@ module colour_palette #(
             end
 
             if (idx_advance) begin
-                idx_valid <= in_valid;
+                idx_valid <= mux_valid;
 
-                if (in_valid) begin
-                    idx_seq_num     <= in_seq_num;
-                    idx_escaped     <= in_escaped;
-                    idx_overflow    <= in_overflow;
-                    idx_sof         <= in_sof;
-                    idx_eol         <= in_eol;
-                    idx_palette_idx <= scaled_palette_index(in_iter_count, palette_scale);
+                if (mux_valid) begin
+                    idx_seq_num     <= mux_seq_num;
+                    idx_escaped     <= mux_escaped;
+                    idx_overflow    <= mux_overflow;
+                    idx_sof         <= mux_sof;
+                    idx_eol         <= mux_eol;
+                    idx_palette_idx <= scaled_palette_index(mux_iter_count, palette_scale);
                 end
                 else begin
                     idx_sof <= 1'b0;
