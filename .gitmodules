@@ -13,3 +13,6 @@
 [submodule "fpga/v2.1_release/ext/vivado-library"]
 	path = fpga/v2.1_release/ext/vivado-library
 	url = https://github.com/Digilent/vivado-library.git
+[submodule "fpga/v3_release/ext/vivado-library"]
+	path = fpga/v3_release/ext/vivado-library
+	url = https://github.com/Digilent/vivado-library.git
