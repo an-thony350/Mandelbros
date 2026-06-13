@@ -10,7 +10,7 @@
 // Tool Versions: Vivado 2023.2
 //
 // Description:
-//   v2.0 direct framebuffer writer. Accepts coloured pixels carrying an absolute
+//   v3.0 direct framebuffer writer. Accepts coloured pixels carrying an absolute
 //   framebuffer pixel index and writes them to DDR through a simple AXI4 master.
 //
 // Notes:
@@ -24,8 +24,7 @@ module pixel_write_engine #(
     parameter int DATA_W       = 32,
     parameter int SEQ_W        = 20,
     parameter int X_RES        = 1280,
-    parameter int Y_RES        = 720,
-    parameter int FRAME_PIXELS = X_RES * Y_RES
+    parameter int Y_RES        = 720
 )(
     input  logic clk,
     input  logic rst_n,
@@ -41,6 +40,7 @@ module pixel_write_engine #(
     input  logic [7:0]       in_r,
     input  logic [7:0]       in_g,
     input  logic [7:0]       in_b,
+    input  logic [31:0]      frame_pixels_in,
 
     output logic        busy,
     output logic        done,
@@ -68,175 +68,136 @@ module pixel_write_engine #(
     output logic                  m_axi_bready
 );
 
-    localparam logic [1:0] AXI_BURST_INCR = 2'b01;
-    localparam logic [2:0] AXI_SIZE_4B    = 3'b010;
-    localparam logic [1:0] AXI_RESP_OKAY  = 2'b00;
-    localparam logic [31:0] FRAME_PIXELS_32 = FRAME_PIXELS;
 
-`ifndef SYNTHESIS
-    initial begin
-        if (DATA_W != 32) begin
-            $error("pixel_write_engine v2.0 currently requires DATA_W == 32");
-        end
-        if (ADDR_W < (SEQ_W + 2)) begin
-            $error("ADDR_W must be at least SEQ_W + 2 for pixel_index byte addressing");
-        end
-        if (FRAME_PIXELS <= 0) begin
-            $error("FRAME_PIXELS must be positive");
+    // Local Registers
+
+    logic [ADDR_W-1:0] fifo_addr [0:15];
+    logic [DATA_W-1:0] fifo_data [0:15];
+    logic [3:0]        wr_ptr, rd_ptr;
+    logic [4:0]        fifo_count;
+    logic fifo_full, fifo_empty;
+
+    logic [5:0] outstanding_writes;
+    logic can_issue_axi;
+
+    logic pending_aw, pending_w;
+
+    logic b_fire, issue_fire;
+
+
+    // Combinational logic configuring the AXI burst for single writes
+    
+    assign m_axi_awlen   = 8'd0;    
+    assign m_axi_awsize  = 3'b010;  
+    assign m_axi_awburst = 2'b01;  
+    assign m_axi_awcache = 4'b1111;  
+    assign m_axi_awprot  = 3'b000;
+    assign m_axi_wstrb   = 4'hF;
+    assign m_axi_wlast   = 1'b1;    
+
+
+    // Combinational FIFO logic (check if FIFO ready/full)
+    assign fifo_full  = (fifo_count == 5'd16);
+    assign fifo_empty = (fifo_count == 5'd0);
+    
+    assign in_ready = !fifo_full && enable;
+
+    // Sequential write logic for pixel data  into the FIFO buffer
+    always_ff @(posedge clk) begin
+        if (!rst_n || soft_reset) begin
+            wr_ptr <= 0;
+        end else if (in_valid && in_ready) begin
+            fifo_addr[wr_ptr] <= framebuffer_base + (in_pixel_index << 2);
+            fifo_data[wr_ptr] <= {8'h00, in_r, in_b, in_g};
+            wr_ptr <= wr_ptr + 1;
         end
     end
-`endif
 
-    typedef enum logic [1:0] {
-        ST_IDLE,
-        ST_SEND_AW_W,
-        ST_WAIT_B
-    } state_t;
+    // Checks if axi burst is possible
+    assign can_issue_axi = (outstanding_writes < 6'd30);
 
-    state_t state_q;
-
-    logic frame_active_q;
-    logic reset_pending_q;
-    logic aw_done_q;
-    logic w_done_q;
-
-    logic [ADDR_W-1:0] write_addr_q;
-    logic [DATA_W-1:0] pixel_word_q;
-
-    logic aw_fire;
-    logic w_fire;
-    logic b_fire;
-
-    logic [ADDR_W-1:0] pixel_index_ext;
-    logic [ADDR_W-1:0] pixel_byte_offset;
-
-    assign aw_fire = m_axi_awvalid && m_axi_awready;
-    assign w_fire  = m_axi_wvalid  && m_axi_wready;
-    assign b_fire  = m_axi_bvalid  && m_axi_bready;
-
-    assign pixel_index_ext   = {{(ADDR_W-SEQ_W){1'b0}}, in_pixel_index};
-    assign pixel_byte_offset = pixel_index_ext << 2;
-
-    assign busy = frame_active_q || (state_q != ST_IDLE);
-    assign idle = !frame_active_q && (state_q == ST_IDLE) && !reset_pending_q;
-
-    assign in_ready = frame_active_q &&
-                      enable &&
-                      !reset_pending_q &&
-                      (state_q == ST_IDLE) &&
-                      (pixels_accepted < FRAME_PIXELS_32);
-
-    assign m_axi_awaddr  = write_addr_q;
-    assign m_axi_awlen   = 8'd0;
-    assign m_axi_awsize  = AXI_SIZE_4B;
-    assign m_axi_awburst = AXI_BURST_INCR;
-    assign m_axi_awvalid = (state_q == ST_SEND_AW_W) && !aw_done_q;
-
-    assign m_axi_wdata  = pixel_word_q;
-    assign m_axi_wstrb  = {(DATA_W/8){1'b1}};
-    assign m_axi_wlast  = 1'b1;
-    assign m_axi_wvalid = (state_q == ST_SEND_AW_W) && !w_done_q;
-
-    assign m_axi_bready = (state_q == ST_WAIT_B);
-
+    // Sequential logic for burst of data from FIFO to AXI w & aw data
+    
     always_ff @(posedge clk) begin
-        if (!rst_n) begin
-            state_q         <= ST_IDLE;
-            frame_active_q  <= 1'b0;
-            reset_pending_q <= 1'b0;
-            aw_done_q       <= 1'b0;
-            w_done_q        <= 1'b0;
-            write_addr_q    <= '0;
-            pixel_word_q    <= '0;
-            done            <= 1'b0;
-            error           <= 1'b0;
-            pixels_accepted <= 32'd0;
-            pixels_written  <= 32'd0;
-            write_errors    <= 32'd0;
-        end
-        else if ((soft_reset || reset_pending_q) && (state_q == ST_IDLE)) begin
-            state_q         <= ST_IDLE;
-            frame_active_q  <= 1'b0;
-            reset_pending_q <= 1'b0;
-            aw_done_q       <= 1'b0;
-            w_done_q        <= 1'b0;
-            write_addr_q    <= '0;
-            pixel_word_q    <= '0;
-            done            <= 1'b0;
-            error           <= 1'b0;
-            pixels_accepted <= 32'd0;
-            pixels_written  <= 32'd0;
-            write_errors    <= 32'd0;
-        end
-        else if (start && idle) begin
-            state_q         <= ST_IDLE;
-            frame_active_q  <= 1'b1;
-            reset_pending_q <= 1'b0;
-            aw_done_q       <= 1'b0;
-            w_done_q        <= 1'b0;
-            write_addr_q    <= '0;
-            pixel_word_q    <= '0;
-            done            <= 1'b0;
-            error           <= 1'b0;
-            pixels_accepted <= 32'd0;
-            pixels_written  <= 32'd0;
-            write_errors    <= 32'd0;
-        end
-        else begin
-            if (soft_reset) begin
-                reset_pending_q <= 1'b1;
+        if (!rst_n || soft_reset) begin
+            m_axi_awvalid <= 0;
+            m_axi_wvalid  <= 0;
+            pending_aw    <= 0;
+            pending_w     <= 0;
+            rd_ptr        <= 0;
+            fifo_count    <= 0;
+            pixels_accepted <= 0;
+        end else begin
+            // Pull from FIFO if we have room on the AXI bus and aren't currently sending
+            if (!fifo_empty && can_issue_axi && !pending_aw && !pending_w) begin
+                m_axi_awvalid <= 1'b1;
+                m_axi_awaddr  <= fifo_addr[rd_ptr];
+                pending_aw    <= 1'b1;
+
+                m_axi_wvalid  <= 1'b1;
+                m_axi_wdata   <= fifo_data[rd_ptr];
+                pending_w     <= 1'b1;
+
+                rd_ptr          <= rd_ptr + 1;
+                pixels_accepted <= pixels_accepted + 1;
+            end
+            
+            if (m_axi_awready && m_axi_awvalid) begin
+                m_axi_awvalid <= 1'b0;
+                pending_aw    <= 1'b0;
+            end
+            
+            if (m_axi_wready && m_axi_wvalid) begin
+                m_axi_wvalid <= 1'b0;
+                pending_w    <= 1'b0;
             end
 
-            case (state_q)
-                ST_IDLE: begin
-                    aw_done_q <= 1'b0;
-                    w_done_q  <= 1'b0;
-
-                    if (in_valid && in_ready) begin
-                        write_addr_q <= framebuffer_base + pixel_byte_offset;
-                        pixel_word_q <= {8'h00, in_r, in_b, in_g};
-                        pixels_accepted <= pixels_accepted + 32'd1;
-                        state_q <= ST_SEND_AW_W;
-                    end
-                end
-
-                ST_SEND_AW_W: begin
-                    if (aw_fire) begin
-                        aw_done_q <= 1'b1;
-                    end
-
-                    if (w_fire) begin
-                        w_done_q <= 1'b1;
-                    end
-
-                    if ((aw_done_q || aw_fire) && (w_done_q || w_fire)) begin
-                        state_q <= ST_WAIT_B;
-                    end
-                end
-
-                ST_WAIT_B: begin
-                    if (b_fire) begin
-                        pixels_written <= pixels_written + 32'd1;
-
-                        if (m_axi_bresp != AXI_RESP_OKAY) begin
-                            error        <= 1'b1;
-                            write_errors <= write_errors + 32'd1;
-                        end
-
-                        if ((pixels_written + 32'd1) >= FRAME_PIXELS_32) begin
-                            done           <= 1'b1;
-                            frame_active_q <= 1'b0;
-                        end
-
-                        state_q <= ST_IDLE;
-                    end
-                end
-
-                default: begin
-                    state_q <= ST_IDLE;
-                end
-            endcase
+            // FIFO Counter Management
+            if ((in_valid && in_ready) && (!fifo_empty && can_issue_axi && !pending_aw && !pending_w))
+                fifo_count <= fifo_count;
+            else if (in_valid && in_ready)
+                fifo_count <= fifo_count + 1;
+            else if (!fifo_empty && can_issue_axi && !pending_aw && !pending_w)
+                fifo_count <= fifo_count - 1;
         end
     end
+
+    // 4. AXI RESPONSE ENGINE (B Channel)
+    assign m_axi_bready = 1'b1;
+    
+    assign b_fire     = m_axi_bvalid && m_axi_bready;
+    assign issue_fire = (!fifo_empty && can_issue_axi && !pending_aw && !pending_w);
+
+    always_ff @(posedge clk) begin
+        if (!rst_n || soft_reset || start) begin
+            outstanding_writes <= 0;
+            pixels_written     <= 0;
+            write_errors       <= 0;
+            done               <= 0;
+        end else begin
+            // Track outstanding requests
+            if (issue_fire && !b_fire) 
+                outstanding_writes <= outstanding_writes + 1;
+            else if (!issue_fire && b_fire) 
+                outstanding_writes <= outstanding_writes - 1;
+
+            // Process response
+            if (b_fire) begin
+                pixels_written <= pixels_written + 1;
+                if (m_axi_bresp != 2'b00) begin
+                    write_errors <= write_errors + 1;
+                end
+                
+                if (pixels_written + 1 == frame_pixels_in) begin
+                    done <= 1'b1;
+                end
+            end
+        end
+    end
+
+    // Status logic
+    assign busy  = (pixels_accepted > 0) && !done;
+    assign idle  = (pixels_accepted == 0) && !done;
+    assign error = (write_errors > 0);
 
 endmodule

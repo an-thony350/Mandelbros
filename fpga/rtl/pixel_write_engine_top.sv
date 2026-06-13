@@ -10,7 +10,7 @@
 // Tool Versions: Vivado 2023.2
 //
 // Description:
-//   Thin Vivado-facing wrapper for the v2.0 direct framebuffer writer.
+//   Thin Vivado-facing wrapper for the v3.0 direct framebuffer writer.
 //   This mirrors the existing pixel_scheduler_top style: the top-level module
 //   exposes block-design friendly S00_AXI and M00_AXI ports, then instantiates
 //   the AXI-Lite/register wrapper.
@@ -26,7 +26,6 @@ module pixel_write_engine_top #(
     parameter integer SEQ_W        = 20,
     parameter integer X_RES        = 1280,
     parameter integer Y_RES        = 720,
-    parameter integer FRAME_PIXELS = X_RES * Y_RES,
 
     parameter integer C_S00_AXI_DATA_WIDTH = 32,
     parameter integer C_S00_AXI_ADDR_WIDTH = 5,
@@ -113,7 +112,6 @@ module pixel_write_engine_top #(
         .SEQ_W(SEQ_W),
         .X_RES(X_RES),
         .Y_RES(Y_RES),
-        .FRAME_PIXELS(FRAME_PIXELS),
         .C_S_AXI_DATA_WIDTH(C_S00_AXI_DATA_WIDTH),
         .C_S_AXI_ADDR_WIDTH(C_S00_AXI_ADDR_WIDTH),
         .C_M_AXI_ADDR_WIDTH(C_M00_AXI_ADDR_WIDTH),

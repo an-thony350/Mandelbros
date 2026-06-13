@@ -10,7 +10,7 @@
 // Tool Versions: Vivado 2023.2
 //
 // Description:
-//   AXI-Lite control/status wrapper for the v2.0 pixel_write_engine.
+//   AXI-Lite control/status wrapper for the v3.0 pixel_write_engine.
 //   This follows the same broad style as pixel_scheduler_AXI: an AXI-Lite
 //   register bank feeds the core module instantiated in the user-logic section.
 //
@@ -43,7 +43,6 @@ module pixel_write_engine_AXI #(
     parameter integer SEQ_W        = 20,
     parameter integer X_RES        = 1280,
     parameter integer Y_RES        = 720,
-    parameter integer FRAME_PIXELS = X_RES * Y_RES,
 
     parameter integer C_S_AXI_DATA_WIDTH = 32,
     parameter integer C_S_AXI_ADDR_WIDTH = 5,
@@ -126,6 +125,7 @@ module pixel_write_engine_AXI #(
 
     reg [C_S_AXI_DATA_WIDTH-1:0] slv_reg0_control;
     reg [C_S_AXI_DATA_WIDTH-1:0] slv_reg2_framebuffer_base;
+    reg [C_S_AXI_DATA_WIDTH-1:0] slv_reg6_frame_pixels;
 
     wire slv_reg_rden;
     wire slv_reg_wren;
@@ -139,7 +139,6 @@ module pixel_write_engine_AXI #(
     reg writer_start_pulse;
     reg writer_soft_reset_pulse;
 
-    localparam [C_S_AXI_DATA_WIDTH-1:0] FRAME_PIXELS_VALUE = FRAME_PIXELS;
     localparam [15:0] X_RES_VALUE = X_RES;
     localparam [15:0] Y_RES_VALUE = Y_RES;
 
@@ -219,6 +218,7 @@ module pixel_write_engine_AXI #(
         if (S_AXI_ARESETN == 1'b0) begin
             slv_reg0_control          <= '0;
             slv_reg2_framebuffer_base <= '0;
+            slv_reg6_frame_pixels     <= '0;
             writer_start_pulse        <= 1'b0;
             writer_soft_reset_pulse   <= 1'b0;
         end
@@ -243,10 +243,19 @@ module pixel_write_engine_AXI #(
                             end
                         end
                     end
+                    
+                    REG_FRAME_PIXELS: begin 
+                        for (byte_index = 0; byte_index <= (C_S_AXI_DATA_WIDTH/8)-1; byte_index = byte_index + 1) begin
+                            if (S_AXI_WSTRB[byte_index]) begin
+                                slv_reg6_frame_pixels[(byte_index*8) +: 8] <= S_AXI_WDATA[(byte_index*8) +: 8];
+                            end
+                        end
+                    end
 
                     default: begin
                         slv_reg0_control          <= slv_reg0_control;
                         slv_reg2_framebuffer_base <= slv_reg2_framebuffer_base;
+                        slv_reg6_frame_pixels     <= slv_reg6_frame_pixels;
                     end
                 endcase
             end
@@ -334,7 +343,7 @@ module pixel_write_engine_AXI #(
             end
 
             REG_FRAME_PIXELS: begin
-                reg_data_out = FRAME_PIXELS_VALUE;
+                reg_data_out = slv_reg6_frame_pixels;;
             end
 
             REG_GEOMETRY: begin
@@ -363,8 +372,7 @@ module pixel_write_engine_AXI #(
         .DATA_W(C_M_AXI_DATA_WIDTH),
         .SEQ_W(SEQ_W),
         .X_RES(X_RES),
-        .Y_RES(Y_RES),
-        .FRAME_PIXELS(FRAME_PIXELS)
+        .Y_RES(Y_RES)
     ) pixel_write_engine_inst (
         .clk(S_AXI_ACLK),
         .rst_n(S_AXI_ARESETN),
@@ -373,6 +381,7 @@ module pixel_write_engine_AXI #(
         .enable(writer_enable),
         .soft_reset(writer_soft_reset_pulse),
         .framebuffer_base(slv_reg2_framebuffer_base[C_M_AXI_ADDR_WIDTH-1:0]),
+        .frame_pixels_in(slv_reg6_frame_pixels),
 
         .in_valid(in_valid),
         .in_ready(in_ready),
