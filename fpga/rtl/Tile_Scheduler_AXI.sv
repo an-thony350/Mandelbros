@@ -17,7 +17,7 @@
 //				the fractal computation cores. The module also includes a start 
 //				signal controlled by software through the AXI-Lite interface.
 // 
-// Dependencies: tile_scheduler.sv
+// Dependencies: tile_scheduler.sv, tile_evaluator.sv
 // 
 // Revision:
 // Revision 0.01 - File Created
@@ -31,11 +31,13 @@ module tile_scheduler_AXI #
 		// Users to add parameters here
         parameter integer NUM_CORES = 16, 
         parameter integer W         = 26, 
-        parameter integer INDEX_W   = 20, 
+        parameter integer INDEX_W   = 21, 
         parameter integer ITER_W    = 16, 
         parameter integer MODE_W    = 3,  
         parameter integer X_RES     = 1280,
         parameter integer Y_RES     = 720,
+        parameter integer TILE_W    = 32,
+        parameter integer TILE_H    = 16,
 		// User parameters ends
 		// Do not modify the parameters beyond this line
 
@@ -59,6 +61,21 @@ module tile_scheduler_AXI #
         output wire [(ITER_W*NUM_CORES)-1:0]        out_max_iter,
         output wire [(MODE_W*NUM_CORES)-1:0]        out_mode,
         output wire [(INDEX_W*NUM_CORES)-1:0]       out_pixel_index,
+        
+        output wire                            out_fill_valid,
+        output wire [INDEX_W-2:0]              out_fill_index,
+        output wire [ITER_W-1:0]               out_fill_iter,
+        output wire                            out_fill_escaped,
+
+        
+        input  wire                            iter_in_valid,
+        input  wire [ITER_W-1:0]               iter_in_iter,
+        input  wire                            iter_in_is_perimeter,
+        input  wire                            iter_in_escaped,
+        input  wire                            iter_in_ready,
+        
+        input  wire                            cp_in_fill_ready,
+
 		// User ports ends
 		// Do not modify the ports beyond this line
 
@@ -507,7 +524,9 @@ module tile_scheduler_AXI #
         .ITER_W(ITER_W),
         .MODE_W(MODE_W),
         .X_RES(X_RES),
-        .Y_RES(Y_RES)
+        .Y_RES(Y_RES),
+        .TILE_W(TILE_W),
+        .TILE_H(TILE_H)
     ) tile_scheduler_final (
         .clk(S_AXI_ACLK),
         .rst_n(render_rst_n), // reset will occur on either system side or software not running
@@ -527,6 +546,12 @@ module tile_scheduler_AXI #
         // Other inputs
         
         .in_ready(in_ready),
+        .iter_in_valid(iter_in_valid),
+        .iter_in_iter(iter_in_iter),
+        .iter_in_is_perimeter(iter_in_is_perimeter),
+        .iter_in_escaped(iter_in_escaped),
+        .iter_in_ready(iter_in_ready),
+        .cp_in_fill_ready(cp_in_fill_ready),
         
         // Outputs
         
@@ -540,7 +565,11 @@ module tile_scheduler_AXI #
         .z0_i(z0_i),
         .out_max_iter(out_max_iter),
         .out_mode(out_mode),
-        .out_pixel_index(out_pixel_index)  
+        .out_pixel_index(out_pixel_index),
+        .out_fill_valid(out_fill_valid),
+        .out_fill_index(out_fill_index),
+        .out_fill_iter(out_fill_iter),
+        .out_fill_escaped(out_fill_escaped) 
   );      
         
         

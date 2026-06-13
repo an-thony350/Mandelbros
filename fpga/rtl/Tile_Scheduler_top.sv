@@ -12,7 +12,7 @@
 // Tool Versions: Vivado 2023.2
 // Description: Top-level module for the tile scheduler
 // 
-// Dependencies: tile_scheduler_AXI, tile_scheduler.sv
+// Dependencies: tile_scheduler_AXI, tile_scheduler.sv, tile_evaluator.sv
 //
 // Additional Comments: None
 ////////////////////////////////////////////////////////////////////////////////// 
@@ -28,6 +28,8 @@
         parameter integer MODE_W    = 3,
         parameter integer X_RES     = 1280,
         parameter integer Y_RES     = 720,
+        parameter integer TILE_W    = 32,
+        parameter integer TILE_H    = 16,
 		// User parameters ends
 		// Do not modify the parameters beyond this line
 
@@ -51,6 +53,21 @@
         output wire [(ITER_W*NUM_CORES)-1:0]        out_max_iter,
         output wire [(MODE_W*NUM_CORES)-1:0]        out_mode,
         output wire [(INDEX_W*NUM_CORES)-1:0]       out_pixel_index,
+        
+        output wire                            out_fill_valid,
+        output wire [INDEX_W-2:0]              out_fill_index,
+        output wire [ITER_W-1:0]               out_fill_iter,
+        output wire                            out_fill_escaped,
+        
+        input  wire                            iter_in_valid,
+        input  wire [ITER_W-1:0]               iter_in_iter,
+        input  wire                            iter_in_is_perimeter,
+        input  wire                            iter_in_escaped,
+        input  wire                            iter_in_ready,
+        
+        input  wire                            cp_in_fill_ready,
+
+
 		// User ports ends
 		// Do not modify the ports beyond this line
 
@@ -93,6 +110,12 @@
 	    .in_ready(in_ready),
         .last_pixel(last_pixel),
         .in_valid(in_valid),
+        .iter_in_valid(iter_in_valid),
+        .iter_in_iter(iter_in_iter),
+        .iter_in_is_perimeter(iter_in_is_perimeter),
+        .iter_in_escaped(iter_in_escaped),
+        .iter_in_ready(iter_in_ready),
+        .cp_in_fill_ready(cp_in_fill_ready),
         .render_rst_n_out(render_rst_n_out),
         .c_r(c_r),
         .c_i(c_i),
@@ -101,6 +124,10 @@
         .out_max_iter(out_max_iter),
         .out_mode(out_mode),
         .out_pixel_index(out_pixel_index),
+        .out_fill_valid(out_fill_valid),
+        .out_fill_index(out_fill_index),
+        .out_fill_iter(out_fill_iter),
+        .out_fill_escaped(out_fill_escaped),
 		.S_AXI_ACLK(s00_axi_aclk),
 		.S_AXI_ARESETN(s00_axi_aresetn),
 		.S_AXI_AWADDR(s00_axi_awaddr),
