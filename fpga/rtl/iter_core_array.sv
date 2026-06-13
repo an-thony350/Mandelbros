@@ -1,11 +1,29 @@
 `timescale 1ns / 1ps
+//////////////////////////////////////////////////////////////////////////////////
+// Company: Mandelbros
+// Engineers: Anthony Bartlett & Denzil Erza-Essien
+// 
+// Create Date: 28.05.2026
+// Design Name: Iteration Core Array
+// Module Name: iter_core_array
+// Project Name: FractalScope
+// Target Devices: PYNQ-Z1
+// Tool Versions: Vivado 2023.2
+// Description: Array of iteration cores for parallel Mandelbrot/Julia set 
+//              computation, with an integrated result arbiter and final pipeline 
+//              isolation skid buffer to ensure timing closure.
+// 
+// Dependencies: iter_core.sv, skid_buffer_m.sv, result_arbiter.sv
+//
+// Additional Comments: None
+//////////////////////////////////////////////////////////////////////////////////
 
 (* keep_hierarchy = "yes" *)
 module iter_core_array #(
     parameter int NUM_CORES = 16,
     parameter int W         = 26,
     parameter int FRAC      = 22,
-    parameter int SEQ_W     = 20,
+    parameter int SEQ_W     = 21,
     parameter int ITER_W    = 16,
     parameter int MODE_W    = 3,
     parameter logic [W-1:0] ESCAPE_THRESH_Q422 = 26'sh100_0000 
@@ -31,7 +49,8 @@ module iter_core_array #(
 
     // Outputs to Reorder Buffer
     output wire               out_valid,
-    output wire  [SEQ_W-1:0]  out_seq,
+    output wire  [SEQ_W-2:0]  out_seq,
+    output wire               out_is_perimeter,
     output wire  [ITER_W-1:0] out_iter,
     output wire               out_escaped,
     output wire               out_overflow
@@ -125,6 +144,7 @@ module iter_core_array #(
                 .out_data (skid_out_wire)      
             );
             
+            // EXPLICIT COMBINATIONAL UNPACKING TO FLAT ARRAYS
             assign core_out_seq[(i*SEQ_W)  +: SEQ_W]   = skid_out_wire[SEQ_BIT  +: SEQ_W];
             assign core_out_iter[(i*ITER_W) +: ITER_W] = skid_out_wire[ITER_BIT +: ITER_W];
             assign core_out_escaped[i]                 = skid_out_wire[ESC_BIT];
@@ -164,6 +184,7 @@ module iter_core_array #(
         .rob_in_overflow(arb_overflow)
     );
 
+    // Final pipeline installation - fixing slack issues
     wire [TOTAL_W-1:0] final_skid_in;
     wire [TOTAL_W-1:0] final_skid_out;
 
@@ -190,8 +211,9 @@ module iter_core_array #(
     );
 
     // Unpack directly to the module outputs
-    assign out_seq      = final_skid_out[SEQ_BIT  +: SEQ_W];
-    assign out_iter     = final_skid_out[ITER_BIT +: ITER_W];
-    assign out_escaped  = final_skid_out[ESC_BIT];
-    assign out_overflow = final_skid_out[OVF_BIT];
+    assign out_seq          = final_skid_out[SEQ_BIT  +: (SEQ_W-1)];
+    assign out_is_perimeter = final_skid_out[SEQ_BIT  + (SEQ_W-1)];
+    assign out_iter         = final_skid_out[ITER_BIT +: ITER_W];
+    assign out_escaped      = final_skid_out[ESC_BIT];
+    assign out_overflow     = final_skid_out[OVF_BIT];
 endmodule

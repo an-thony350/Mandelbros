@@ -27,7 +27,7 @@ module result_arbiter #(
     parameter int NUM_CORES = 16,
     parameter int W         = 26,
     parameter int ITER_W    = 16,
-    parameter int SEQ_W     = 20
+    parameter int SEQ_W     = 21
 )(
     input logic clk,
     input logic rst_n,
