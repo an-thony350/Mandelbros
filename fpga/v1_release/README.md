@@ -12,7 +12,7 @@ The notebook PS used for this release can be found in `Mandelbros/notebooks/2_fu
 
 ```
 git clone --no-checkout https://github.com/an-thony350/Mandelbros.git
-cd Manelbros
+cd Mandelbros
 git sparse-scheckout init --cone
 git sparse-checkout set fpga/v1_release
 git checkout main
