@@ -13,7 +13,7 @@ The notebook PS used for this release can be found in `Mandelbros/notebooks/frac
 ```
 git clone --no-checkout https://github.com/an-thony350/Mandelbros.git
 cd Mandelbros
-git sparse-scheckout init --cone
+git sparse-checkout init --cone
 git sparse-checkout set fpga/v2.1_release
 git checkout main
 git submodule update --init --recursive fpga/v2.1_release/ext/vivado-library
