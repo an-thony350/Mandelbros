@@ -25,11 +25,12 @@
 #define MULT_ZOOM_COARSE   10
 #define MULT_ITER_FINE      1
 #define MULT_ITER_COARSE   10
+#define DEADZONE        50
 
 /* ── Packet format ───────────────────────────────────────── */
 /*
  * NEW Wire format (Pots removed):
- * FSCP,<seq>,<btn_hex>,<zoom_d>,<iter_d>,<jx>,<jy>,<crc>\n
+ * TDT,<seq>,<btn_hex>,<zoom_d>,<iter_d>,<jx>,<jy>,<crc>\n
  */
 #define PAYLOAD_BUF 64   
 
@@ -118,6 +119,14 @@ int main(void) {
 
             int16_t jx = adc_joy_x();
             int16_t jy = adc_joy_y();
+            if (jx > -DEADZONE && jx < DEADZONE) jx = 0;
+            if (jy > -DEADZONE && jy < DEADZONE) jy = 0;
+
+            #define JOY_MAX 300
+            if (jx > JOY_MAX) jx = JOY_MAX;
+            if (jx < -JOY_MAX) jx = -JOY_MAX;
+            if (jy > JOY_MAX) jy = JOY_MAX;
+            if (jy < -JOY_MAX) jy = -JOY_MAX;
 
             /* Build the shortened payload */
             char payload[PAYLOAD_BUF];
