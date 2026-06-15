@@ -1,12 +1,13 @@
 """
+
+NO LONGER USING
+
 Run this script ONLY. It will:
   1. Check g++ is installed
   2. Compile the C++ fractal code
   3. Run the compiled program (you enter parameters as normal)
   4. Detect which PNG was saved from the C++ output
   5. Display it on screen
-
-Works on macOS and Windows.
 
 Requirements:
     pip install pygame
