@@ -7,12 +7,12 @@
  * Must stay in sync with §5.2 of the build guide and §2.2 pinout.
  */
 static const uint8_t BTN_PINS[] = {
-    11,   /* bit  0: NEXT      */
-    10,   /* bit  1: BACK      */
+    6,   /* bit  0: NEXT      */
+    7,   /* bit  1: BACK      */
     8,   /* bit  2: SELECT    */
-    7,   /* bit  3: MODE      */
-    9,  /* bit  4: PALETTE   */
-    6,  /* bit  5: RESET     */
+    9,   /* bit  3: MODE      */
+    10,  /* bit  4: PALETTE   */
+    11,  /* bit  5: RESET     */
     2,   /* bit  6: ENC0_SW (zoom push) */
     5,   /* bit  7: ENC1_SW (iter push) */
     12,  /* bit  8: JOY_SW   */
