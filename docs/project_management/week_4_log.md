@@ -20,4 +20,4 @@ The main issue we faced this week was that the PCB was not going to come on time
 
 The scrapboard controller's functionality was validated with the latest system release. The casing was then finalised using the scrapboard measurements and sent off for 3D printing.
 
-After receiving the casing, the controller was assembled, and fit of the casing and the scrapboards was checked. That marked the completion of the final controller design
+After receiving the casing, the controller was assembled, and fit of the casing and the scrapboards was checked. That marked the completion of the final controller design.
