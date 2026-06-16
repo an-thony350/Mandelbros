@@ -34,8 +34,6 @@ To allow development and testing without needing the full system running, a test
 
 Testing against multiple fractal backgrounds revealed that the initial panel opacity was too low, making text unreadable over bright areas of the fractal. This was fixed by increasing the panel darkness and adding a drop shadow to all text, ensuring the overlay is legible regardless of what is rendered underneath.
 
-...
-
 
 ### Updates to Plan/Timeline and Evaluation
 
