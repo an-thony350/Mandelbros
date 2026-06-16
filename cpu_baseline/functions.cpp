@@ -51,7 +51,7 @@ int Julia_calculation(double c_re, double c_im, double z_re, double z_im, int si
     }
     return i;
 }
-int Burning_Ship_calculation(double c_re, double c_im, int size){ // The image for this could be improved
+int Burning_Ship_calculation(double c_re, double c_im, int size){ 
 
     // Initial values
     double z_re = 0.0;
@@ -64,7 +64,7 @@ int Burning_Ship_calculation(double c_re, double c_im, int size){ // The image f
         double tmp_z_im = std::abs(z_im);
 
         z_re = (tmp_z_re*tmp_z_re) - (tmp_z_im*tmp_z_im) + c_re;
-        z_im = -2*(tmp_z_re*tmp_z_im) + c_im;
+        z_im = 2*(tmp_z_re*tmp_z_im) + c_im;
 
         i++;
     }
@@ -97,6 +97,11 @@ void choose_mode(){
     std::cout << "Fractal Generation: 0\n";
     std::cout << "Timing Analysis: 1\n";
     std::cin  >> chosen_mode;
+
+    if(choose_mode != 0 || choose_mode != 1){
+        std::cout << "Invalid Input, please redo\n";
+        return choose_mode();
+    }
 }
 
 void choose_set(){
@@ -118,7 +123,7 @@ void choose_set(){
 
     std::cout << "Choose a value for zoom\n";
     std::cout << "min = 1.0\n";
-    std::cout << "max = 10000000\n";
+    std::cout << "max = 100\n";
     std::cin >> zoom_factor;
 
     std::cout << "Choose a center value for x\n";
@@ -131,10 +136,15 @@ void choose_set(){
     std::cout << "max = 2.0\n";
     std::cin >> center_y;
 
+    if(zoom_factor > 100 || abs(center_x) > 2 || abs(center_y) > 2 || abs(chosen_set) > 3){
+        std::cout << "Invalid Input, please redo\n";
+        return choose_set();
+    }
+
     return;
 }
 std::string set_lookup(){
-    switch (chosen_set){
+    switch (abs(chosen_set)){
     case 0:
         return "Mandelbrot";
         break;
@@ -245,7 +255,7 @@ double average(std::vector<double> v){
     return ans;
 }
 
-// Standard test
+// Standard test - single-threaded
 
 double non_threaded_timing(){
 
@@ -268,7 +278,7 @@ double non_threaded_timing(){
     return average(timing_doubles);
 }
 
-// Threaded tests - could also use for 1 thread but slower on average
+// Multi-threaded tests - could also use for 1 thread but slower on average
 
 double threaded_timing(){
 
@@ -283,8 +293,8 @@ double threaded_timing(){
         for(int thread_count = 0; thread_count < NUM_THREADS; thread_count++){
         
             int start_row = thread_count*(ROW_NUM/NUM_THREADS);
-            int end_row = (thread_count == NUM_THREADS - 1) ? ROW_NUM : start_row + ROW_NUM/NUM_THREADS; // used for an uneven distribution of row loops - can be removed w/ assumption
-            threads.push_back(std::thread(Call_Calc, start_row, end_row)); // synchronisation needed here to check properly - CHECK THIS, MAY NOT BE AN ISSUE
+            int end_row = (thread_count == NUM_THREADS - 1) ? ROW_NUM : start_row + ROW_NUM/NUM_THREADS; // used for an uneven distribution of row loops - can be removed if thread count produces equal row split
+            threads.push_back(std::thread(Call_Calc, start_row, end_row)); // No Race conditions in this
         }
 
         for(int thread_num = 0; thread_num < NUM_THREADS; thread_num++){
