@@ -1,18 +1,6 @@
 # CPU baseline
 
 
-| Table of contents |
-| - |
-| [Summary](#summary) |
-| [How to access](#how-to-access) |
-| [Using HDMI display](#HDMI) |
-| [Set calculations](#set-calculations) |
-|  [Pixel calculations](#pixel-calculations) |
-| [Timing & threaded approaches](#timing--threaded-approaches) |
-| [Colour Palette & Image generation](#colour-palette--image-generation) |
-
-## Summary
-
 ## How to access
 
 In order to run the `main.cpp` file giving the png image of the set you require, follow these steps:
@@ -36,10 +24,3 @@ Then copy and run this `python3 display_hdmi.py`.
 
 When done, press `Q` or `ESC` to close.
 
-## Set calculations
-
-## Pixel calculations  
-
-## Timing & Threaded approaches
-
-## Colour palette & Image generation
