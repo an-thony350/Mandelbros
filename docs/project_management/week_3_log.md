@@ -16,4 +16,4 @@ On the PS side, we included double buffering (two frame buffers) which eliminate
 
 Given that we are able to achieve a full release varient that we could provide in a worse-case scenario. We now are plannig to move on with challenging hardware-based extensions that can severley cut latency as well as provide a better user experience. We are also planning to fully flesh out our educational section of the project providing details to a user who may not have the context of the sets that we do.
 
-## EE Team
+## EEE Team

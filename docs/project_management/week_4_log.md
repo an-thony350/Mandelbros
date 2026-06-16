@@ -10,5 +10,6 @@ On the PL side, we were able to fully complete a couple of our proposed extensio
 
 ### PS
 
+On the PS side, we fully integrated our educational design with our PL fractal viewer. We moved from our Jupyter notebook PS, mainly used for testing purposes, to python scripts running our educational section, HUD overlay, and backend for the PL.
 
 ## EEE Team
