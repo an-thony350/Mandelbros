@@ -41,7 +41,7 @@ HEIGHT = 720
 BPP = 4
 
 # Bitstream Path
-DEFAULT_BIT_PATH = "/home/xilinx/jupyter_notebooks/fractalscope_v2"
+DEFAULT_BIT_PATH = "/home/xilinx/jupyter_notebooks/fractalscope"
 
 
 # AXI VDMA MM2S register offsets
