@@ -44,13 +44,9 @@ Testing against multiple fractal backgrounds revealed that the initial panel opa
 ## EEE Team
 
 ### Summary
-This week focused on sourcing components and beginning the breadboard build for the FractalScope controller.
-
-### Components
-- ...
-
-### Circuit
-- ...
+This week focused on fixing the breadboard circuit for the controller together with the firmware to ensure a clean and correct serial output. The controller serial output was validated for the joystick and all of the buttons/switches, meaning that the circuit design was complete.
 
 ### Next Steps
-- ...
+- Validate controller functionality together with the PYNQ board and full system.
+- Create a PCB design and order it.
+- Design casing and order for 3D printing.
