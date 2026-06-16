@@ -41,10 +41,12 @@ Testing against multiple fractal backgrounds revealed that the initial panel opa
 
 ...
 
-## EEE Team
+## Controller Team
 
 ### Summary
-This week focused on fixing the breadboard circuit for the controller together with the firmware to ensure a clean and correct serial output. The controller serial output was validated for the joystick and all of the buttons/switches, meaning that the circuit design was complete.
+This week focused on fixing the breadboard circuit for the controller together with the firmware to ensure a clean and correct serial output, integrating all of the controller components (Pico, joystick, rotary encoders, tactile buttons). There were numerous issues after the initial build, both in firmware and hardware. We decided to remove the pots and the mux for a more user-friendly experience, transferring their functions to the encoders. The initial firmware that was developed in the build guide also had issues which had to be fixed, and our hardware changes also had to be synchronised with the firmware.
+
+After rigoruous testing, the controller serial output was validated for all of the possible input combinations, meaning that the circuit design was complete.
 
 ### Next Steps
 - Validate controller functionality together with the PYNQ board and full system.
