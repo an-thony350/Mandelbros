@@ -4,7 +4,7 @@ In order to rebuild this vivado project, we have provided the relevant files and
 
 **Please note that this design requires Vivado 2023.2**
 
-The notebook PS used for this release can be found in `Mandelbros/notebooks/fractalscope_v3.ipynb`
+
 
 ### Instructions
 
