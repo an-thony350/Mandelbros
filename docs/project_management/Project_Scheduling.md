@@ -55,7 +55,7 @@ These are load-bearing. Everything else follows.
 ### 3.1 Targets
 
 - Resolution: 1280×720 internal render and output.
-- Accelerator clock: 100 MHz target
+- Accelerator clock: 100 MHz target.
 
 ### 3.2 Required iterations/second
 

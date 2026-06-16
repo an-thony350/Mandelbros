@@ -1,18 +1,19 @@
-[submodule "fpga/v1_release/ext/vivado-library"]
-	path = fpga/v1_release/ext/vivado-library
-	url = https://github.com/Digilent/vivado-library.git
-[submodule "fpga/v1.1_release/fpga/v1.1_release/ext/vivado-library"]
-	path = fpga/v1.1_release/fpga/v1.1_release/ext/vivado-library
-	url = https://github.com/Digilent/vivado-library.git
-[submodule "fpga/v1.1_release/ext/vivado-library"]
-	path = fpga/v1.1_release/ext/vivado-library
-	url = https://github.com/Digilent/vivado-library.git
-[submodule "fpga/v2_release/ext/vivado-library"]
-	path = fpga/v2_release/ext/vivado-library
-	url = https://github.com/Digilent/vivado-library.git
-[submodule "fpga/v2.1_release/ext/vivado-library"]
-	path = fpga/v2.1_release/ext/vivado-library
-	url = https://github.com/Digilent/vivado-library.git
-[submodule "fpga/v3_release/ext/vivado-library"]
-	path = fpga/v3_release/ext/vivado-library
-	url = https://github.com/Digilent/vivado-library.git
+[submodule "releases/v1_release/ext/vivado-library"]
+    path = releases/v1_release/ext/vivado-library
+    url = https://github.com/Digilent/vivado-library.git
+
+[submodule "releases/v1.1_release/ext/vivado-library"]
+    path = releases/v1.1_release/ext/vivado-library
+    url = https://github.com/Digilent/vivado-library.git
+
+[submodule "releases/v2_release/ext/vivado-library"]
+    path = releases/v2_release/ext/vivado-library
+    url = https://github.com/Digilent/vivado-library.git
+
+[submodule "releases/v2.1_release/ext/vivado-library"]
+    path = releases/v2.1_release/ext/vivado-library
+    url = https://github.com/Digilent/vivado-library.git
+
+[submodule "releases/v3_release/ext/vivado-library"]
+    path = releases/v3_release/ext/vivado-library
+    url = https://github.com/Digilent/vivado-library.git
