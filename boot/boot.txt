@@ -1,1 +1,0 @@
-will contain boot drivers, sd card setup, etc.
