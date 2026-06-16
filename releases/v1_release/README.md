@@ -14,12 +14,12 @@ The notebook PS used for this release can be found in `Mandelbros/notebooks/2_fu
 git clone --no-checkout https://github.com/an-thony350/Mandelbros.git
 cd Mandelbros
 git sparse-checkout init --cone
-git sparse-checkout set fpga/v1_release
+git sparse-checkout set releases/v1_release
 git checkout main
-git submodule update --init --recursive fpga/v1_release/ext/vivado-library
+git submodule update --init --recursive releases/v1_release/ext/vivado-library
 ```
 **Please note the repository path**
 
 2. Open Vivado 2023.2
-3. In the Tcl Console enter the command `cd <repository path>/Mandelbros/fpga/v1_release`
+3. In the Tcl Console enter the command `cd <repository path>/Mandelbros/releases/v1_release`
 4. Enter the command `source build_project.tcl`

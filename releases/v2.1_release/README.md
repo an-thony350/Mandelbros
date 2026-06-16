@@ -14,15 +14,15 @@ The notebook PS used for this release can be found in `Mandelbros/notebooks/frac
 git clone --no-checkout https://github.com/an-thony350/Mandelbros.git
 cd Mandelbros
 git sparse-checkout init --cone
-git sparse-checkout set fpga/v2.1_release
+git sparse-checkout set releases/v2.1_release
 git checkout main
-git submodule update --init --recursive fpga/v2.1_release/ext/vivado-library
+git submodule update --init --recursive releases/v2.1_release/ext/vivado-library
 ```
 **Please note the repository path**
 
 2. Open Vivado 2023.2
 3. In the Tcl Console enter the command :
-`cd <repository path>/Mandelbros/fpga/v2.1_release`
+`cd <repository path>/Mandelbros/releases/v2.1_release`
 4. Enter the command `source build_project.tcl`
 
 ### Changes
