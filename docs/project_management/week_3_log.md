@@ -1,4 +1,4 @@
-# Week 3 log
+# Week 3 Log
 
 This week was focused on making proposed changes after the presentation, ensuring we had a full working system.
 
