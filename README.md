@@ -6,6 +6,8 @@ FractalScope is an interactive HDMI demo that renders Mandelbrot-family fractals
 
 The project is not just a fractal drawing program. It is a small hardware/software system: the PS configures the view and owns the user experience, while the PL schedules pixels, runs many iteration cores in parallel, colours the results, and writes completed pixels into DDR for display.
 
+The report for this project can be found [here](https://github.com/an-thony350/FractalScope/blob/main/Dream_Team_Report.pdf).
+
 ## What is implemented
 
 - Fixed-point SystemVerilog fractal accelerator for:
